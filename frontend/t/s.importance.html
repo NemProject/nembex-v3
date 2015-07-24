@@ -1,0 +1,72 @@
+<h5>Importance transfer transaction</h5>
+
+<div class="row">
+	<div class="three columns">
+		Block:
+	</div>
+	<div class="eight columns">
+		<a href="#/block/{{block_height}}">{{block_height}}</a>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Hash:
+	</div>
+	<div class="eight columns mono">
+		{{hash}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Sender:
+	</div>
+	<div class="eight columns mono">
+		<a href="#/account/{{s_printablekey}}/0">{{s_printablekey_fmt}}</a>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Remote:
+	</div>
+	<div class="eight columns mono">
+		<strong><a href="#/account/{{r_printablekey}}/0">{{r_printablekey_fmt}}</a></strong>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Fee:
+	</div>
+	<div class="eight columns mono">
+		{{{fee_fmt}}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Timestamp:
+	</div>
+	<div class="three columns mono">
+		{{{timestamp}}}
+	</div>
+	<div class="three columns">
+		Deadline:
+	</div>
+	<div class="three columns mono">
+		{{{deadline}}}
+	</div>
+</div>
+
+{{#signature}}
+<div class="row">
+	<div class="three columns">
+		Signature:
+	</div>
+	<div class="eight columns mono">
+		<small>{{signature}}</small>
+	</div>
+</div>
+{{/signature}}

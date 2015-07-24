@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<title>NEM Blockchain Explorer v3</title>
+  		<link href="//fonts.googleapis.com/css?family=Raleway:400,300,600|Ubuntu+Mono:400" rel="stylesheet" type="text/css">
+		<link rel="stylesheet" href="css/normalize.css">
+		<link rel="stylesheet" href="css/skeleton.css">
+		<link rel="stylesheet" href="css/custom.css">
+		<link rel="stylesheet" href="css/nembex.css">
+	</head>
+	<body class=''>
+		<div class="container">
+			<div id="header" class="row">
+				<form id="searchForm">
+					<div class="four columns">
+						<h1>nembex v.3</h1>
+					</div>
+					<div class="six columns">
+						<label for="search">Search</label>
+						<input class="u-full-width" type="search" placeholder="" id="search">
+					</div>
+					<div class="two columns">
+						<label for="execute">&nbsp;</label>
+						<input class="u-pull-right" type="submit" id="execute" value="Search" />
+					</div>
+				</form>
+			</div>
+			<div class="row">
+				<div class="twelve columns"><strong>tip:</strong> You can use arrows to navigate on pages with paging</div>
+			</div>
+		</div>
+
+		<div class="navbar-spacer"></div>
+		<nav class="navbar">
+		<div class="container">
+			<ul class="navbar-list">
+				<li class="navbar-item"><a class="navbar-link" href="#/blocks/0">Blocks</a></li>
+				<li class="navbar-item"><a class="navbar-link" href="#/harvesters/">Harvesters</a></li>
+				<li class="navbar-item">
+				<a class="navbar-link" href="#/transactions/" data-popover="#txesNavPopover">Transactions</a>
+				<div id="txesNavPopover" class="popover">
+					<ul class="popover-list">
+						<li class="popover-item">
+						<a class="popover-link" href="#/transfers/0">Transfers</a>
+						</li>
+						<li class="popover-item">
+						<a class="popover-link" href="#/importances/0">Importance</a>
+						</li>
+						<li class="popover-item">
+						<a class="popover-link" href="#/aggregates/0">Aggregate</a>
+						</li>
+						<li class="popover-item">
+						<a class="popover-link" href="#/multisigs/0">Multisig</a>
+						</li>
+						<li class="popover-item">
+						<a class="popover-link" href="#/messages/0">Messages</a>
+						</li>
+					</ul>
+				</div>
+				</li>
+				<li class="navbar-item"><a class="navbar-link" href="#/statistics/">Statistics</a></li>
+				<li class="navbar-item"><a class="navbar-link" href="#/nodes/">Nodes</a></li>
+			</ul>
+		</div>
+		</nav>
+		<div id="main" class="container">
+		</div>
+
+		<script src="js/dygraph-combined.js" ></script>
+		<script src="js/NemFormat.js" ></script>
+		<script src="js/NemChart.js" ></script>
+		<script src="js/jquery.min.js" ></script>
+		<script src="js/mustache.min.js" ></script>
+		<script src="js/sammy/sammy.js" ></script>
+		<script src="js/sammy/plugins/sammy.mustache.js" ></script>
+		<script src="js/nembex-app.js" ></script>
+		<script src="js/xbbcode.js"></script>
+	</body>
+</html>

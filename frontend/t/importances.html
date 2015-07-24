@@ -1,0 +1,30 @@
+<h5>Importance transfer transactions</h5>
+<table id="importances" class="u-full-width">
+  <thead>
+    <tr>
+      <th>Sender /<br> Remote </th>
+      <th>Mode <br> Fee</th>
+      <th>Height</th>
+      <th>Timestamp <br> deadline</th>
+    </tr>
+  </thead>
+</table>
+
+{{#showNav}}
+<ul id="paging">
+	{{#prev}}
+	<li><a rel="prev" href="#/importances/{{prev}}">prev page</a></li>
+	{{/prev}}
+	{{^prev}}
+	<li><a nohref>prev page</a></li>
+	{{/prev}}
+
+	{{#showNext}}
+	<li><a rel="next" href="#/importances/{{next}}">next page</a></li>
+	{{/showNext}}
+	{{^showNext}}
+	<li><a nohref>next page</a></li>
+	{{/showNext}}
+
+</ul>
+{{/showNav}}

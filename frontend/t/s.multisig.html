@@ -1,0 +1,116 @@
+<h5>Multisig transaction</h5>
+
+<div class="row">
+	<div class="three columns">
+		Block:
+	</div>
+	<div class="eight columns">
+		<a href="#/block/{{block_height}}">{{block_height}}</a>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Hash:
+	</div>
+	<div class="eight columns mono">
+		{{hash}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Sender:
+	</div>
+	<div class="eight columns mono">
+		<a href="#/account/{{s_printablekey}}/0">{{s_printablekey_fmt}}</a>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Total Fee:
+	</div>
+	<div class="three columns mono">
+		<strong>{{{total_fees_fmt}}}</strong>
+	</div>
+	<div class="three columns">
+		multisig wrapper fee:
+	</div>
+	<div class="three columns mono">
+		<strong>{{{fee_fmt}}}</strong>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Timestamp:
+	</div>
+	<div class="three columns mono">
+		{{{timestamp}}}
+	</div>
+	<div class="three columns">
+		Deadline:
+	</div>
+	<div class="three columns mono">
+		{{{deadline}}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Signature:
+	</div>
+	<div class="eight columns mono">
+		<small>{{signature}}</small>
+	</div>
+</div>
+
+<div class="row">
+	<div class="one column">
+		Inner:
+	</div>
+	<div id="innerTx" class="eight columns">
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Cosignatures:
+	</div>
+	<div class="nine columns">
+		<strong>{{signatures_count}}</strong>
+	</div>
+</div>
+
+
+{{#signatures}}
+<div class="row">
+	<div class="one columns">&nbsp; </div>
+	<div class="two columns">
+		Cosignatory:
+	</div>
+	<div class="nine columns mono">
+		<a href="#/account/{{s_printablekey}}/0">{{s_printablekey_fmt}}</a>
+	</div>
+</div>
+<div class="row">
+	<div class="one columns">&nbsp; </div>
+	<div class="two columns">
+		Timestamp:
+	</div>
+	<div class="three columns mono">
+		{{{timestamp}}}
+	</div>
+</div>
+<div class="row">
+	<div class="one columns">&nbsp; </div>
+	<div class="two columns">
+		Signature:
+	</div>
+	<div class="nine columns mono">
+		<small>{{signature}}</small>
+	</div>
+</div>
+{{/signatures}}
+

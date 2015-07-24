@@ -1,0 +1,32 @@
+<h5>Multisignature transactions</h5>
+
+<table id="multisigs" class="u-full-width">
+  <thead>
+    <tr>
+      <th>Issuer <br> (tx type) </th>
+      <th>#sigs present <br>Total Fees</th>
+      <th>Height</th>
+      <th>Timestamp <br> deadline</th>
+    </tr>
+  </thead>
+</table>
+
+{{#showNav}}
+<ul id="paging">
+	{{#prev}}
+	<li><a rel="prev" href="#/multisigs/{{prev}}">prev page</a></li>
+	{{/prev}}
+	{{^prev}}
+	<li><a nohref>prev page</a></li>
+	{{/prev}}
+
+	{{#showNext}}
+	<li><a rel="next" href="#/multisigs/{{next}}">next page</a></li>
+	{{/showNext}}
+	{{^showNext}}
+	<li><a nohref>next page</a></li>
+	{{/showNext}}
+
+</ul>
+{{/showNav}}
+

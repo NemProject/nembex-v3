@@ -1,0 +1,31 @@
+<h5>XEM Transfer transactions</h5>
+<table id="transfers" class="u-full-width">
+  <thead>
+    <tr>
+      <th>Sender /<br> Recipient </th>
+      <th>Amount <br> Fee</th>
+      <th>Height</th>
+      <th>Timestamp <br> deadline</th>
+    </tr>
+  </thead>
+</table>
+
+{{#showNav}}
+<ul id="paging">
+	{{#prev}}
+	<li><a rel="prev" href="#/transfers/{{prev}}">prev page</a></li>
+	{{/prev}}
+	{{^prev}}
+	<li><a nohref>prev page</a></li>
+	{{/prev}}
+
+	{{#showNext}}
+	<li><a rel="next" href="#/transfers/{{next}}">next page</a></li>
+	{{/showNext}}
+	{{^showNext}}
+	<li><a nohref>next page</a></li>
+	{{/showNext}}
+
+</ul>
+{{/showNav}}
+

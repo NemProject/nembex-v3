@@ -1,0 +1,39 @@
+<h5>Recent messages <small>except for</small></h5>
+<div class="mono"><small>from:
+{{#exceptFrom}}
+<a href="#/account/{{.}}/0">{{.}}</a>
+{{/exceptFrom}}
+<br>to:
+{{#exceptTo}}
+<a href="#/account/{{.}}/0">{{.}}</a>
+{{/exceptTo}}
+</small>
+</div>
+<table id="messages" class="u-full-width">
+  <thead>
+    <tr>
+      <th>Sender /<br> Recipient </th>
+      <th>height /<br> tx hash</th>
+    </tr>
+  </thead>
+</table>
+
+{{#showNav}}
+<ul id="paging">
+	{{#prev}}
+	<li><a rel="prev" href="#/messages/{{prev}}">prev page</a></li>
+	{{/prev}}
+	{{^prev}}
+	<li><a nohref>prev page</a></li>
+	{{/prev}}
+
+	{{#showNext}}
+	<li><a rel="next" href="#/messages/{{next}}">next page</a></li>
+	{{/showNext}}
+	{{^showNext}}
+	<li><a nohref>next page</a></li>
+	{{/showNext}}
+
+</ul>
+{{/showNav}}
+

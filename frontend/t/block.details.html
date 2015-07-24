@@ -1,0 +1,79 @@
+<div id="block">
+<h5>Block details</h5>
+<div class="row">
+	<div class="three columns">
+		Height:
+	</div>
+	<div class="three columns">
+		{{height}} <span class='dim'>(permalink: <a href="#/block/{{height}}">#</a>)
+	</div>
+	<div class="three columns">
+		Difficulty:
+	</div>
+	<div class="three columns">
+		{{difficulty_fmt}} %
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Timestamp:
+	</div>
+	<div class="nine columns">
+		{{timestamp}} <span class='dim'>nem time: {{timestamp_nem}}</span>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">&nbsp;
+	</div>
+	<div class="nine columns">
+		<span class='dim'>nem time: {{timestamp_nem}}</span>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Hash:
+	</div>
+	<div class="nine columns">
+		{{hash}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Harvester:
+	</div>
+	<div class="nine columns">
+		<a href="#/account/{{s_printablekey}}/0">{{s_printablekey_fmt}}</a>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		# Transactions:
+	</div>
+	<div class="nine columns">
+		<strong>{{tx_count}}</strong>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Fees:
+	</div>
+	<div class="nine columns">
+		{{^fees}}
+			{{{fees_fmt}}}
+		{{/fees}}
+		{{#fees}}
+			<strong>{{{fees_fmt}}}</strong>
+		{{/fees}}
+	</div>
+</div>
+</div>
+
+<div id="block_transactions" class="txlist">
+</div>
+

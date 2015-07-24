@@ -1,0 +1,171 @@
+	{{#meta.cosignatories.length}}
+	<div class="row">
+		<div class="two columns">&nbsp;
+		</div>
+		<div class="ten columns">
+			<strong>MULTISIG account</strong>
+		</div>
+	</div>
+	{{/meta.cosignatories.length}}
+
+	<div class="row">
+		<div class="three columns">
+			Address:
+		</div>
+		<div class="eight columns">
+			<strong>{{raw.printablekey_fmt}}</strong>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="three columns">
+			Public key:
+		</div>
+		<div class="eight columns">
+			{{raw.publickey}}
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="three columns">
+			Importance:
+		</div>
+		<div class="five columns textr">
+			{{{account.importance_fmt}}} <span class='dim'> * 10<sup>(-5)</sup></span>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="three columns">
+			Vested balance:
+		</div>
+		<div class="five columns textr">
+			{{{account.vestedBalance_fmt}}} <span class='dim'>XEM</span>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="three columns">
+			Balance (network):
+		</div>
+		<div class="five columns textr">
+			<strong>{{{account.balance_fmt}}}</strong> <span class='dim'>XEM</span>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="three columns">
+			Balance (nembex):
+		</div>
+		<div class="five columns textr">
+			{{{raw.balance.6_fmt}}} XEM
+		</div>
+	</div>
+	<div class="row">
+		<div class="one column">&nbsp;
+		</div>
+		<div class="eleven columns">
+			<strong>+</strong> <small> IN: {{{raw.balance.1_fmt}}} </small>
+			<strong>+</strong> <small> mIN {{{raw.balance.4_fmt}}} </small>
+			<strong>-</strong> <small> OUT: {{{raw.balance.2_fmt}}} </small>
+			<strong>-</strong> <small> mIN {{{raw.balance.5_fmt}}} </small>
+			<strong>+</strong> <small> H {{{raw.balance.3_fmt}}} </small>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="three columns">
+			Harvested blocks:
+		</div>
+		<div class="two columns">
+			{{raw.harvestedBlocks}} <span class='dim'>(nembex)</span>
+		</div>
+		<div class="three columns ">
+			{{account.harvestedBlocks}} <span class='dim'>(nem network)</span>
+		</div>
+	</div>
+	<div class="row">
+		<div class="three columns">
+			Harvested fees:
+		</div>
+		<div class="four columns textr">
+			{{{raw.balance.3_fmt}}} <span class='dim'>XEM</span>
+		</div>
+	</div>
+	<div class="row">
+		<div class="three columns">
+			Remote harvesting:
+		</div>
+		{{^raw.other}}
+		<div class="four columns textr">
+			{{meta.remoteStatus}}
+		</div>
+		{{/raw.other}}
+		{{#raw.other}}
+		<div class="nine columns">
+			{{raw.other.text}}:
+			<a class='mono' href="#/account/{{raw.other.printablekey_fmt}}/0">{{raw.other.printablekey_fmt}}</a><br>
+			<span class='dim'>started at: {{raw.other.start_height}}</span>
+			{{#raw.other.stop_height}}
+			stopped at: {{raw.other.stop_height}}
+			{{/raw.other.stop_height}}
+		</div>
+		{{/raw.other}}
+	</div>
+
+	{{#meta.cosignatoryOf.length}}
+	<div class="row">
+		<div class="twelve columns">
+		Cosignatory of:
+		</div>
+	</div>
+	{{#meta.cosignatoryOf}}
+	<div class="row">
+		<div class="one columns">&nbsp;
+		</div>
+		<div class="eight columns mono">
+			<a href="#/account/{{address}}/0">{{address_fmt}}</a>
+		</div>
+		<div class="three columns textr">
+			{{{balance_fmt}}} <span class='dim'>XEM</span>
+		</div>
+	</div>
+	{{/meta.cosignatoryOf}}
+	{{/meta.cosignatoryOf.length}}
+
+	{{#meta.cosignatories.length}}
+	<div class="row">
+		<div class="six columns">
+		List of cosignatories
+		</div>
+		<div class="six columns">
+		(required {{account.multisigInfo.minCosignatories}})
+		</div>
+	</div>
+	{{#meta.cosignatories}}
+	<div class="row">
+		<div class="one columns">&nbsp;
+		</div>
+		<div class="eight columns mono">
+			<a href="#/account/{{address}}/0">{{address_fmt}}</a>
+		</div>
+	</div>
+	{{/meta.cosignatories}}
+	{{/meta.cosignatories.length}}
+
+
+<div>
+<h5>Recent transactions (changing balance)</h5>
+<!--
+<div id="graph">
+		<h5>Last balance changes</h5>
+		<div>
+			<div id="balances_labels"></div>
+			<div id='balances' class="canvas"></div>
+		</div>
+</div>
+-->
+<div id="account_transactions" class="txlist">
+</div>
+</div>
+

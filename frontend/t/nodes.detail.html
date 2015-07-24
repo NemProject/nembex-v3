@@ -1,0 +1,20 @@
+<tr>
+	<td>
+		{{seq}}
+	</td>
+	<td>
+		{{endpoint.host}}<small><span class='dim'>:{{endpoint.port}}</span></small>
+	</td>
+	<td class="nodename os {{os}}"> &nbsp;
+		{{{identity.name_fmt}}}
+	</td>
+	<td> &nbsp;
+		<a href="#/block/{{metaData.height}}">{{metaData.height}}</a>
+	</td>
+	<td>
+		{{{metaData.version_fmt}}}
+	</td>
+	<td>
+		{{uptime}}
+	</td>
+</tr>

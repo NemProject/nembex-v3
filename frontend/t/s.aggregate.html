@@ -1,0 +1,94 @@
+<h5>Aggregate modification transaction</h5>
+
+<div class="row">
+	<div class="three columns">
+		Block:
+	</div>
+	<div class="eight columns">
+		<a href="#/block/{{block_height}}">{{block_height}}</a>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Hash:
+	</div>
+	<div class="eight columns mono">
+		{{hash}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Sender:
+	</div>
+	<div class="eight columns mono">
+		<a href="#/account/{{s_printablekey}}/0">{{s_printablekey_fmt}}</a>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Fee:
+	</div>
+	<div class="eight columns mono">
+		{{{fee_fmt}}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Timestamp:
+	</div>
+	<div class="three columns mono">
+		{{{timestamp}}}
+	</div>
+	<div class="three columns">
+		Deadline:
+	</div>
+	<div class="three columns mono">
+		{{{deadline}}}
+	</div>
+</div>
+
+{{#signature}}
+<div class="row">
+	<div class="three columns">
+		Signature:
+	</div>
+	<div class="eight columns mono">
+		<small>{{signature}}</small>
+	</div>
+</div>
+{{/signature}}
+
+<div class="row">
+	<div class="three columns">
+		Modifications:
+	</div>
+	<div class="eight columns">
+		<strong>{{modifications_count}}</strong>
+	</div>
+</div>
+<div class="row">
+	<div class="three columns">
+		Required (after tx):
+	</div>
+	<div class="eight columns">
+		<strong>{{min_cosignatories}}</strong>
+	</div>
+</div>
+
+
+{{#modifications}}
+<div class="row">
+	<div class="two columns">
+	</div>
+	<div class="one columns">
+		{{type_fmt}}
+	</div>
+	<div class="eight columns mono">
+		<a href="#/account/{{printablekey}}/0">{{printablekey_fmt}}</a>
+	</div>
+</div>
+{{/modifications}}
