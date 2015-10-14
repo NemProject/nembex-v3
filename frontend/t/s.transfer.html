@@ -36,13 +36,24 @@
 	</div>
 </div>
 
+{{! if there are any attachments amount is a multiplier, so we don't want to show it }}
 <div class="row">
+{{^attachments}}
 	<div class="three columns">
 		Amount:
 	</div>
 	<div class="eight columns mono">
 		<strong>{{{amount_fmt}}}</strong>
 	</div>
+{{/attachments}}
+{{#attachments.length}}
+	<div class="three columns">
+		Quantity:
+	</div>
+	<div class="eight columns mono">
+		{{{amount_fmt}}}
+	</div>
+{{/attachments.length}}
 </div>
 
 <div class="row">
@@ -99,4 +110,56 @@
 	</div>
 </div>
 {{/hasMsg}}
+
+<hr />
+
+{{#attachments}}
+{{#type_fmt}}
+<div class='row'>
+	<div class="one column">&nbsp;
+	</div>
+	<div class="two columns">
+		<strong>[ {{{type_fmt}}} ]</strong>
+	</div>
+	<div class="eight columns">
+		<a href="#/mosaic/{{mosaic.hash}}/0">{{mosaic.mosaic_fqdn}}</a>
+	</div>
+</div>
+<div class='row'>
+	<div class="one column">&nbsp;
+	</div>
+	<div class="two columns">
+		<strong>[ {{{type_fmt}}} ]</strong>
+	</div>
+	<div class="eight columns">
+		Total Quantity: {{{quantity_fmt}}}
+	</div>
+</div>
+{{/type_fmt}}
+{{^type_fmt}}
+<div class='row'>
+	<div class="three columns">
+		Mosaic:
+	</div>
+	<div class="eight columns">
+		<a href="#/mosaic/{{mosaic.hash}}/0">{{mosaic.mosaic_fqdn}}</a>
+	</div>
+</div>
+<div class='row'>
+	<div class="three columns">
+		{{#type_fmt}}
+		<strong>[ {{{type_fmt}}} ]</strong>
+		{{/type_fmt}} 
+		{{^type_fmt}}
+		Total Quantity
+		{{/type_fmt}} 
+	</div>
+	<div class="eight columns">
+		<strong>{{{quantity_fmt}}}</strong>
+	</div>
+</div>
+{{/type_fmt}}
+
+{{/attachments}}
+
 

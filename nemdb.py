@@ -2,6 +2,7 @@ import psycopg2
 from binascii import hexlify
 from psycopg2.extras import RealDictConnection
 from config import config
+from collections import *
 
 def tobin(x):
 	return bytearray(x.decode('hex'))
@@ -31,141 +32,313 @@ class Db:
 			fun({'block_height':r[0],'signer_id':r[1],'remote_id':r[2],'mode':r[3]})
 		cur.close()
 
+	def createNamespaceTables(self, cur):
+		cur.execute("""
+			CREATE TABLE IF NOT EXISTS namespaces
+			(id BIGINT DEFAULT nextval('common_transactions_seq_id') PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 hash bytea NOT NULL UNIQUE,
+			 timestamp varchar NOT NULL,
+			 timestamp_unix BIGINT NOT NULL,
+			 timestamp_nem BIGINT NOT NULL,
+			 signer_id BIGINT REFERENCES accounts(id),
+			 signature bytea,
+			 deadline BIGINT NOT NULL,
+
+			 fee BIGINT NOT NULL,
+			 rental_sink BIGINT REFERENCES accounts(id),
+			 rental_fee BIGINT NOT NULL,
+			 parent_ns BIGINT,
+			 namespace_name VARCHAR(148),
+			 namespace_part VARCHAR(66)
+			)
+			""") 
+		cur.execute("""
+			CREATE TABLE IF NOT EXISTS mosaics
+			(id BIGINT DEFAULT nextval('common_transactions_seq_id') PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 hash bytea NOT NULL UNIQUE,
+			 timestamp varchar NOT NULL,
+			 timestamp_unix BIGINT NOT NULL,
+			 timestamp_nem BIGINT NOT NULL,
+			 signer_id BIGINT REFERENCES accounts(id),
+			 signature bytea,
+			 deadline BIGINT NOT NULL,
+
+			 fee BIGINT NOT NULL,
+			 creation_sink BIGINT REFERENCES accounts(id),
+			 creation_fee BIGINT NOT NULL,
+			 parent_ns BIGINT REFERENCES namespaces(id),
+			 mosaic_name VARCHAR(34),
+			 mosaic_fqdn VARCHAR(180),
+			 mosaic_description VARCHAR(516)
+			)
+			""")
+
+		cur.execute("""
+			CREATE TABLE IF NOT EXISTS mosaic_levys
+			(id BIGSERIAL PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 mosaic_id BIGINT REFERENCES mosaics(id),
+
+			 type INT NOT NULL,
+			 recipient_id BIGINT REFERENCES accounts(id),
+			 fee_mosaic_id BIGINT REFERENCES mosaics(id),
+			 fee BIGINT NOT NULL
+			)""")
+		cur.execute("""
+			CREATE TABLE IF NOT EXISTS mosaic_properties
+			(id BIGSERIAL PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 mosaic_id BIGINT REFERENCES mosaics(id),
+
+			 name VARCHAR(64),
+			 value VARCHAR(64)
+			)""")
+		cur.execute("""
+			CREATE TABLE IF NOT EXISTS transfer_attachments
+			(id BIGSERIAL PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 transfer_id BIGINT REFERENCES transfers(id),
+
+			 type INT REFERENCES inouts_type(id),
+			 mosaic_id BIGINT REFERENCES mosaics(id),
+			 quantity BIGINT NOT NULL
+			)""")
+		cur.execute("""
+			CREATE TABLE IF NOT EXISTS mosaic_inouts
+			(id BIGSERIAL PRIMARY KEY,
+			 account_id BIGINT REFERENCES accounts(id),
+			 block_height BIGINT REFERENCES blocks(height),
+			 mosaic_id BIGINT REFERENCES mosaics(id),
+
+			 type INT REFERENCES inouts_type(id),
+			 tx_id BIGSERIAL,
+			 quantity BIGINT
+			)
+			""")
+		
+		cur.execute("""
+			CREATE TABLE IF NOT EXISTS mosaic_amounts
+			(id BIGSERIAL PRIMARY KEY,
+			 account_id BIGINT REFERENCES accounts(id),
+			 block_height BIGINT REFERENCES blocks(height),
+			 mosaic_id BIGINT REFERENCES mosaics(id),
+			 amount BIGINT
+			)
+			""")
+
+		cur.execute("""
+			CREATE TABLE IF NOT EXISTS mosaic_state_supply
+			(id BIGSERIAL PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 mosaic_id BIGINT REFERENCES mosaics(id),
+
+			 quantity BIGINT
+			)""")
+
+		# block heights indexes
+		cur.execute("CREATE INDEX namespaces_blockheight_idx ON namespaces(block_height)");
+		cur.execute("CREATE INDEX mosaics_blockheight_idx ON mosaics(block_height)");
+		cur.execute('CREATE INDEX mosaic_levys_blockheight_idx ON mosaic_levys(block_height)')
+		cur.execute('CREATE INDEX mosaic_properties_blockheight_idx ON mosaic_properties(block_height)')
+		cur.execute('CREATE INDEX mosaic_inouts_blockheight_idx ON mosaic_inouts(block_height)')
+		cur.execute('CREATE INDEX mosaic_amounts_blockheight_idx ON mosaic_amounts(block_height)')
+		cur.execute('CREATE INDEX mosaic_state_supply_blockheight_idx ON mosaic_state_supply(block_height)')
+
+		cur.execute("CREATE INDEX mosaic_levys_mosaic_idx ON mosaic_levys(mosaic_id)");
+		cur.execute("CREATE INDEX mosaic_properties_mosaic_idx ON mosaic_properties(mosaic_id)");
+		cur.execute("CREATE INDEX transfer_attachments_blockheight_idx ON transfer_attachments(block_height)");
+		cur.execute('CREATE INDEX inouts_blockheight_idx ON inouts(block_height)')
+		cur.execute('CREATE INDEX harvests_blockheight_idx ON harvests(block_height)')
+
+
+		cur.execute("CREATE INDEX transfer_attachments_mosaic_idx ON transfer_attachments(mosaic_id)");
+		cur.execute("CREATE INDEX transfer_attachments_transfer_idx ON transfer_attachments(transfer_id)");
+
+		cur.execute("CREATE INDEX mosaic_inouts_type_idx on mosaic_inouts(type)");
+
+		cur.execute("select * from accounts where printablekey = 'TBULEAUG2CZQISUR442HWA6UAKGWIXHDABJVIPS4'");
+		nId = cur.fetchone()[0]
+		NA = bytearray('n/a')
+		cur.execute("INSERT INTO namespaces (block_height, hash, timestamp, timestamp_unix, timestamp_nem, signer_id, signature, deadline, fee, rental_sink, rental_fee, parent_ns, namespace_name, namespace_part) VALUES (%s,%s, %s,%s,%s,%s,%s,%s, %s,%s,%s,%s,%s,%s) RETURNING id", (1,NA, '2015-03-29 00:06:25',1427587585,0,nId,NA,0, 0,nId,0,None,"nem","nem"))
+		nsId = cur.fetchone()[0]
+		print "NEM namespace ID: ", nsId
+
+		cur.execute("INSERT INTO mosaics (block_height, hash, timestamp, timestamp_unix, timestamp_nem, signer_id, signature, deadline, fee, creation_sink, creation_fee, parent_ns, mosaic_name, mosaic_fqdn, mosaic_description) VALUES (%s,%s, %s,%s,%s,%s,%s,%s, %s,%s,%s, %s,%s,%s,%s) RETURNING id", (1,NA, '2015-03-29 00:06:25',1427587585,0,nId,NA,0,  0,nId,0, nsId,"nem.xem","nem.xem", "Mosaic representing XEM"))
+		msId = cur.fetchone()[0]
+		print "NEM.XEM mosaic ID: ", msId
+
+		cur.execute("INSERT INTO mosaic_state_supply (block_height, mosaic_id, quantity) VALUES (1, %s, 8999999999000000)", (msId,))
+			
+		cur.executemany("INSERT INTO mosaic_properties (block_height,mosaic_id,name,value) VALUES (%s,%s, %s,%s)",
+			((1,msId, 'divisibility', "6"),
+			(1,msId, 'initialSupply', "8999999999"),
+			(1,msId, 'mutableSupply', "0"),
+			(1,msId, 'transferable', "0")))
+
+		cur.execute("INSERT INTO inouts_type VALUES (%s,%s)", (11, 'levy incoming'))
+		cur.execute("INSERT INTO inouts_type VALUES (%s,%s)", (12, 'levy outgoing'))
+		cur.execute("INSERT INTO inouts_type VALUES (%s,%s)", (14, 'levy incoming multisig'))
+		cur.execute("INSERT INTO inouts_type VALUES (%s,%s)", (15, 'levy outgoing multisig'))
+
+
+	def createSupplies(self, cur):
+		cur.execute("""
+			CREATE TABLE IF NOT EXISTS mosaic_supplies
+			(id BIGINT DEFAULT nextval('common_transactions_seq_id') PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 hash bytea NOT NULL UNIQUE,
+			 timestamp varchar NOT NULL,
+			 timestamp_unix BIGINT NOT NULL,
+			 timestamp_nem BIGINT NOT NULL,
+			 signer_id BIGINT REFERENCES accounts(id),
+			 signature bytea,
+			 deadline BIGINT NOT NULL,
+			 fee BIGINT NOT NULL,
+
+			 mosaic_id BIGINT REFERENCES mosaics(id),
+			 supply_type INT NOT NULL,
+			 delta BIGINT NOT NULL
+			)""")
+
+		cur.execute("CREATE INDEX mosaic_supplies_blockheight_idx ON mosaic_supplies(block_height)");
+
 	def createTables(self):
 		cur = self.conn.cursor()
 		cur.execute("""
-SELECT 0 FROM pg_class where relname = 'common_transactions_seq_id'
-""")
+			SELECT 0 FROM pg_class where relname = 'common_transactions_seq_id'
+			""")
 		result = cur.fetchone()
 		if result is None:
 			cur.execute(" CREATE SEQUENCE common_transactions_seq_id;")
 
 		cur.execute("""
-CREATE TABLE IF NOT EXISTS accounts
-(id BIGSERIAL PRIMARY KEY,
- printablekey varchar UNIQUE,
- publickey bytea)
-""")
+			CREATE TABLE IF NOT EXISTS accounts
+			(id BIGSERIAL PRIMARY KEY,
+			 printablekey varchar UNIQUE,
+			 publickey bytea)
+			""")
 		cur.execute("""
-CREATE TABLE IF NOT EXISTS blocks
-(height BIGINT PRIMARY KEY,
- hash bytea NOT NULL,
- timestamp varchar NOT NULL,
- timestamp_unix BIGINT NOT NULL,
- timestamp_nem BIGINT NOT NULL,
- signer_id bigint REFERENCES accounts(id),
- signature bytea NOT NULL,
- type int NOT NULL,
- difficulty bigint NOT NULL,
- tx_count int NOT NULL,
- fees bigint NOT NULL
-)
-""")
+			CREATE TABLE IF NOT EXISTS blocks
+			(height BIGINT PRIMARY KEY,
+			 hash bytea NOT NULL,
+			 timestamp varchar NOT NULL,
+			 timestamp_unix BIGINT NOT NULL,
+			 timestamp_nem BIGINT NOT NULL,
+			 signer_id bigint REFERENCES accounts(id),
+			 signature bytea NOT NULL,
+			 type int NOT NULL,
+			 difficulty bigint NOT NULL,
+			 tx_count int NOT NULL,
+			 fees bigint NOT NULL
+			)
+			""")
 		cur.execute("""
-CREATE TABLE IF NOT EXISTS transfers
-(id BIGINT DEFAULT nextval('common_transactions_seq_id') PRIMARY KEY,
- block_height BIGINT REFERENCES blocks(height),
- hash bytea NOT NULL UNIQUE,
- timestamp varchar NOT NULL,
- timestamp_unix BIGINT NOT NULL,
- timestamp_nem BIGINT NOT NULL,
- signer_id BIGINT REFERENCES accounts(id),
- signature bytea,
- deadline BIGINT NOT NULL,
+			CREATE TABLE IF NOT EXISTS transfers
+			(id BIGINT DEFAULT nextval('common_transactions_seq_id') PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 hash bytea NOT NULL UNIQUE,
+			 timestamp varchar NOT NULL,
+			 timestamp_unix BIGINT NOT NULL,
+			 timestamp_nem BIGINT NOT NULL,
+			 signer_id BIGINT REFERENCES accounts(id),
+			 signature bytea,
+			 deadline BIGINT NOT NULL,
 
- recipient_id BIGINT REFERENCES accounts(id),
- amount BIGINT NOT NULL,
- fee BIGINT NOT NULL,
- message_type int,
- message_data bytea
- )
-""")
+			 recipient_id BIGINT REFERENCES accounts(id),
+			 amount BIGINT NOT NULL,
+			 fee BIGINT NOT NULL,
+			 message_type int,
+			 message_data bytea
+			 )
+			""")
 		cur.execute("""
-CREATE TABLE IF NOT EXISTS modifications
-(id BIGINT DEFAULT nextval('common_transactions_seq_id') PRIMARY KEY,
- block_height BIGINT REFERENCES blocks(height),
- hash bytea NOT NULL UNIQUE,
- timestamp varchar NOT NULL,
- timestamp_unix BIGINT NOT NULL,
- timestamp_nem BIGINT NOT NULL,
- signer_id BIGINT REFERENCES accounts(id),
- signature bytea,
- deadline BIGINT NOT NULL,
+			CREATE TABLE IF NOT EXISTS modifications
+			(id BIGINT DEFAULT nextval('common_transactions_seq_id') PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 hash bytea NOT NULL UNIQUE,
+			 timestamp varchar NOT NULL,
+			 timestamp_unix BIGINT NOT NULL,
+			 timestamp_nem BIGINT NOT NULL,
+			 signer_id BIGINT REFERENCES accounts(id),
+			 signature bytea,
+			 deadline BIGINT NOT NULL,
 
- fee BIGINT NOT NULL,
- min_cosignatories INT)
+			 fee BIGINT NOT NULL,
+			 min_cosignatories INT)
 			""")
 
 		cur.execute("""
-CREATE TABLE IF NOT EXISTS modification_entries
-(id BIGSERIAL PRIMARY KEY,
- modification_id BIGINT REFERENCES modifications(id),
- type int NOT NULL,
- cosignatory_id BIGINT REFERENCES accounts(id)
-)
-""")
+			CREATE TABLE IF NOT EXISTS modification_entries
+			(id BIGSERIAL PRIMARY KEY,
+			 modification_id BIGINT REFERENCES modifications(id),
+			 type int NOT NULL,
+			 cosignatory_id BIGINT REFERENCES accounts(id)
+			)
+			""")
 
 		cur.execute("""
-CREATE TABLE IF NOT EXISTS delegates
-(id BIGINT DEFAULT nextval('common_transactions_seq_id') PRIMARY KEY,
- block_height BIGINT REFERENCES blocks(height),
- hash bytea NOT NULL UNIQUE,
- timestamp varchar NOT NULL,
- timestamp_unix BIGINT NOT NULL,
- timestamp_nem BIGINT NOT NULL,
- signer_id BIGINT REFERENCES accounts(id),
- signature bytea,
- deadline BIGINT NOT NULL,
+			CREATE TABLE IF NOT EXISTS delegates
+			(id BIGINT DEFAULT nextval('common_transactions_seq_id') PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 hash bytea NOT NULL UNIQUE,
+			 timestamp varchar NOT NULL,
+			 timestamp_unix BIGINT NOT NULL,
+			 timestamp_nem BIGINT NOT NULL,
+			 signer_id BIGINT REFERENCES accounts(id),
+			 signature bytea,
+			 deadline BIGINT NOT NULL,
 
- remote_id BIGINT REFERENCES accounts(id),
- fee BIGINT NOT NULL,
- mode int NOT NULL
-)
-""")
+			 remote_id BIGINT REFERENCES accounts(id),
+			 fee BIGINT NOT NULL,
+			 mode int NOT NULL
+			)
+			""")
 
 		cur.execute("""
-CREATE TABLE IF NOT EXISTS multisigs
-(id BIGINT DEFAULT nextval('common_transactions_seq_id') PRIMARY KEY,
- block_height BIGINT REFERENCES blocks(height),
- hash bytea NOT NULL UNIQUE,
- timestamp varchar NOT NULL,
- timestamp_unix BIGINT NOT NULL,
- timestamp_nem BIGINT NOT NULL,
- signer_id BIGINT REFERENCES accounts(id),
- signature bytea,
- deadline BIGINT NOT NULL,
+			CREATE TABLE IF NOT EXISTS multisigs
+			(id BIGINT DEFAULT nextval('common_transactions_seq_id') PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 hash bytea NOT NULL UNIQUE,
+			 timestamp varchar NOT NULL,
+			 timestamp_unix BIGINT NOT NULL,
+			 timestamp_nem BIGINT NOT NULL,
+			 signer_id BIGINT REFERENCES accounts(id),
+			 signature bytea,
+			 deadline BIGINT NOT NULL,
 
- fee BIGINT NOT NULL,
- total_fees BIGINT NOT NULL,
- signatures_count INT NOT NULL,
- inner_id BIGINT NOT NULL,
- inner_type INT NOT NULL
-)
-""")
+			 fee BIGINT NOT NULL,
+			 total_fees BIGINT NOT NULL,
+			 signatures_count INT NOT NULL,
+			 inner_id BIGINT NOT NULL,
+			 inner_type INT NOT NULL
+			)
+			""")
 
 		# we don't need common seq id in this one
 		cur.execute("""
-CREATE TABLE IF NOT EXISTS signatures
-(id BIGSERIAL PRIMARY KEY,
- block_height BIGINT REFERENCES blocks(height),
- hash bytea NOT NULL,
- timestamp varchar NOT NULL,
- timestamp_unix BIGINT NOT NULL,
- timestamp_nem BIGINT NOT NULL,
- signer_id BIGINT REFERENCES accounts(id),
- signature bytea,
- deadline BIGINT NOT NULL,
+			CREATE TABLE IF NOT EXISTS signatures
+			(id BIGSERIAL PRIMARY KEY,
+			 block_height BIGINT REFERENCES blocks(height),
+			 hash bytea NOT NULL,
+			 timestamp varchar NOT NULL,
+			 timestamp_unix BIGINT NOT NULL,
+			 timestamp_nem BIGINT NOT NULL,
+			 signer_id BIGINT REFERENCES accounts(id),
+			 signature bytea,
+			 deadline BIGINT NOT NULL,
 
- fee BIGINT NOT NULL,
- multisig_id BIGINT REFERENCES multisigs(id)
-)
-""")
+			 fee BIGINT NOT NULL,
+			 multisig_id BIGINT REFERENCES multisigs(id)
+			)
+			""")
 		cur.execute("""
-CREATE TABLE IF NOT EXISTS inouts_type
-(id INT PRIMARY KEY,
- name VARCHAR NOT NULL
-)
-""")
+			CREATE TABLE IF NOT EXISTS inouts_type
+			(id INT PRIMARY KEY,
+			 name VARCHAR NOT NULL
+			)
+			""")
 		cur.execute("SELECT count(id) FROM inouts_type");
 		ret = cur.fetchone()[0]
 		if ret == 0:
@@ -176,15 +349,15 @@ CREATE TABLE IF NOT EXISTS inouts_type
 			cur.execute("INSERT INTO inouts_type VALUES (%s,%s)", (5, 'outgoing multisig + fees'))
 
 		cur.execute("""
-CREATE TABLE IF NOT EXISTS inouts
-(id BIGSERIAL PRIMARY KEY,
- account_id BIGINT REFERENCES accounts(id),
- block_height BIGINT REFERENCES blocks(height),
- type INT REFERENCES inouts_type(id),
- tx_id BIGSERIAL,
- amount BIGINT
-)
-""")
+			CREATE TABLE IF NOT EXISTS inouts
+			(id BIGSERIAL PRIMARY KEY,
+			 account_id BIGINT REFERENCES accounts(id),
+			 block_height BIGINT REFERENCES blocks(height),
+			 type INT REFERENCES inouts_type(id),
+			 tx_id BIGSERIAL,
+			 amount BIGINT
+			)
+			""")
 		if ret == 0:
 			cur.execute("CREATE INDEX inouts_type_idx on inouts(type)");	
 			cur.execute("CREATE INDEX transfers_blockheight_idx ON transfers(block_height)");
@@ -194,12 +367,23 @@ CREATE TABLE IF NOT EXISTS inouts
 			cur.execute("CREATE INDEX signatures_blockheight_idx ON signatures(block_height)");
 
 		cur.execute("""
-CREATE TABLE IF NOT EXISTS harvests
-(id BIGSERIAL PRIMARY KEY,
- account_id BIGINT REFERENCES accounts(id),
- block_height BIGINT REFERENCES blocks(height)
-)
-""")
+			CREATE TABLE IF NOT EXISTS harvests
+			(id BIGSERIAL PRIMARY KEY,
+			 account_id BIGINT REFERENCES accounts(id),
+			 block_height BIGINT REFERENCES blocks(height)
+			)
+			""")
+		
+		cur.execute("select exists(select * from information_schema.tables where table_name=%s)", ('namespaces',))
+		hasNamespaces = cur.fetchone()[0]
+
+		if not hasNamespaces:
+			self.createNamespaceTables(cur)
+
+		cur.execute("select exists(select * from information_schema.tables where table_name=%s)", ('mosaic_supplies',))
+		hasSupplies = cur.fetchone()[0]
+		if not hasSupplies:
+			self.createSupplies(cur)
 
 		cur.close()
 		self.conn.commit()
@@ -214,6 +398,45 @@ CREATE TABLE IF NOT EXISTS harvests
 		obj = (account_id, height, inout_type, tx_id, amount)
 		cur.execute(sql, obj)
 
+	def _clearMosInouts(self, cur, mosDbId):
+		sql = "DELETE FROM mosaic_inouts where mosaic_id=%s"
+		cur.execute(sql, (mosDbId,))
+
+		sql = "DELETE FROM mosaic_amounts WHERE mosaic_id=%s"
+		cur.execute(sql, (mosDbId,))
+
+	def _getPreviousAmount(self, cur, mosDbId, account_id):
+		sql = "SELECT amount,block_height,id FROM mosaic_amounts WHERE mosaic_id=%s AND account_id=%s ORDER BY block_height DESC LIMIT 1"
+		obj = (mosDbId, account_id)
+		cur.execute(sql, obj)
+		return cur.fetchone()
+
+	def _addMosInout(self, cur, mosDbId, account_id, height, inout_type, tx_id, amount):
+		sql = "INSERT INTO mosaic_inouts (account_id,block_height,mosaic_id, type,tx_id,quantity) VALUES (%s,%s,%s, %s,%s,%s)";
+		obj = (account_id, height, mosDbId, inout_type, tx_id, amount)
+		cur.execute(sql, obj)
+
+		ret = self._getPreviousAmount(cur, mosDbId, account_id)
+		val = ret[0] if ret else 0
+		if inout_type in [1, 1+3, 11, 11+3]:
+			val += amount
+		elif inout_type in [2, 2+3, 12, 12+3]:
+			val -= amount
+		else:
+			print inout_type
+			raise 1
+
+		# nembex is not running postgres 9.5, so we can't take advantage of UPSERT
+		# but since update is running from a single process we're fine
+		if ret and ret[1] == height:
+			#print "need to update instead of insert",ret[2]
+			sql = "UPDATE  mosaic_amounts SET amount=%s WHERE id=%s"
+			obj = (val, ret[2])
+		else:
+			sql = "INSERT INTO mosaic_amounts (account_id,block_height,mosaic_id, amount) VALUES (%s,%s,%s, %s)"
+			obj = (account_id, height, mosDbId, val)
+		cur.execute(sql, obj)
+
 	def addInout(self, account_id, height, inout_type, tx_id, amount):
 		cur = self.conn.cursor()
 		if amount > 0:
@@ -221,69 +444,160 @@ CREATE TABLE IF NOT EXISTS harvests
 		self._addHarvested(cur, account_id, height)
 		cur.close()
 
+	@staticmethod
+	def _getMosaicFqdn(mosaic):
+		mId = mosaic['mosaicId']
+		return mId['namespaceId'] + '.' + mId['name']
+
 	def addInouts(self, block, txes):
-		def inoutTransfer(cur, height, tx):
+		def inoutTransfer(cur, height, tx, txId, fee, multi):
+			v = tx['version'] & 0xffffff
 			srcId = tx['signer_id']
 			dstId = tx['recipient_id']
-			if srcId == dstId:
-				self._addInout(cur, srcId, height, 2, tx['id'], tx['fee'])
-			else:
-				self._addInout(cur, srcId, height, 2, tx['id'], tx['amount']+tx['fee'])
-				self._addInout(cur, dstId, height, 1, tx['id'], tx['amount'])
 
-		def inoutFee(cur, height, tx):
-			srcId = tx['signer_id']
-			self._addInout(cur, srcId, height, 2, tx['id'], tx['fee'])
-			
-		def inoutMultisig(cur, height, tx):
-			itx = tx['otherTrans']
-			if itx['type'] != 257 and itx['type'] != 4097 and itx['type'] != 2049:
-				raise RuntimeError("not-handled-multisig")
-
-			if itx['type'] == 257:
-				# do not reuse
-				srcId = itx['signer_id']
-				dstId = itx['recipient_id']
+			if v == 1 or ('mosaics' not in tx):
 				if srcId == dstId:
-					self._addInout(cur, srcId, height, 5, tx['id'], tx['total_fee'])
+					self._addInout(cur, srcId, height, 2+multi, txId, fee)
 				else:
-					self._addInout(cur, srcId, height, 5, tx['id'], itx['amount']+tx['total_fee'])
-					self._addInout(cur, dstId, height, 4, tx['id'], itx['amount'])
+					self._addInout(cur, srcId, height, 2+multi, txId, tx['amount']+fee)
+					self._addInout(cur, dstId, height, 1+multi, txId, tx['amount'])
+			else:
+				# amount doesn't mean anything, we need to process attachments
+				# to check if there is nem.xem, multiply it
+				print tx
+				amount = tx['amount'] / 1000000
+				qs = defaultdict(long)
+				for mosaic in tx['mosaics']:
+					mosName = Db._getMosaicFqdn(mosaic)
+					qs[mosName] += mosaic['quantity']
+				
+				locdb = Db(True)
+				loccur = locdb.conn.cursor()
+				for mosFqdn,_v in qs.iteritems():
+					v = _v*amount
+					if mosFqdn == 'nem.xem':
+						if srcId == dstId:
+							self._addInout(cur, srcId, height, 2+multi, txId, fee)
+						else:
+							self._addInout(cur, srcId, height, 2+multi, txId, v+fee)
+							self._addInout(cur, dstId, height, 1+multi, txId, v)
+					else:
+						mosaic = locdb._getMosaic(loccur, 'mosaic_fqdn', mosFqdn)
+						mosId = mosaic['id']
+						self._addMosInout(cur, mosId, srcId, height, 2+multi, txId, v)
+						self._addMosInout(cur, mosId, dstId, height, 1+multi, txId, v)
+						if mosaic['levy']:
+							mosId = mosaic['levy']['fee_mosaic']['id']
+							dstId = mosaic['levy']['recipient_id']
+							levyFee = self._calculateLevy(mosaic['levy']['type'], amount, _v, mosaic['levy']['fee'])
+							#print "LEVY:"
+							#del mosaic['levy']['fee_mosaic']
+							#print mosaic['levy']
+							self._addMosInout(cur, mosId, srcId, height, 12+multi, txId, levyFee)
+							self._addMosInout(cur, mosId, dstId, height, 11+multi, txId, levyFee)
+				loccur.close()
 
-			elif itx['type'] == 4097:
-				srcId = itx['signer_id']
-				self._addInout(cur, srcId, height, 5, tx['id'], tx['total_fee'])
+		def inoutFee(cur, height, tx, txId, fee, multi):
+			srcId = tx['signer_id']
+			self._addInout(cur, srcId, height, 2+multi, txId, fee)
+
+		def inoutSink(cur, height, tx, txId, fee, multi):
+			srcId = tx['signer_id']
+			dstId = tx['rentalFeeSink_id']
+
+			self._addInout(cur, srcId, height, 2+multi, txId, tx['rentalFee']+fee)
+			self._addInout(cur, dstId, height, 1+multi, txId, tx['rentalFee'])
+
+		def getPropsMap(tx):
+			_props = {}
+			for prop in tx['properties']:
+				_props[ prop['name'] ] = prop['value']
+			_props['divisibility'] = int(_props['divisibility'], 10)
+			_props['initialSupply'] = int(_props['initialSupply'], 10)
+			return _props
+
+		def supplyToValue(props, supply):
+			mul = 10 ** props['divisibility']
+			return supply * mul
+
+		def inoutSinkMosaic(cur, height, tx, txId, fee, multi):
+			srcId = tx['signer_id']
+			dstId = tx['creationFeeSink_id']
+
+			self._addInout(cur, srcId, height, 2+multi, txId, tx['creationFee']+fee)
+			self._addInout(cur, dstId, height, 1+multi, txId, tx['creationFee'])
+
+			#print "----"
+			#print tx
+			#print "----"
+			self._clearMosInouts(cur, tx['id'])
+			_props = getPropsMap(tx['mosaicDefinition'])
+			v = supplyToValue(_props, _props['initialSupply'])
+			self._addMosInout(cur, tx['id'], srcId, height, 1+multi, txId, v)
+
+		def inoutSupply(cur, height, tx, txId, fee, multi):
+			srcId = tx['signer_id']
+
+			inoutFee(cur, height, tx, txId, fee, multi)
+
+			locdb = Db(True)
+			loccur = locdb.conn.cursor()
+			mosFqdn = Db._getMosaicFqdn(tx)
+			mosaic = locdb._getMosaic(loccur, 'mosaic_fqdn', mosFqdn)
+			loccur.close()
 			
-			elif itx['type'] == 2049:
-				srcId = itx['signer_id']
-				self._addInout(cur, srcId, height, 5, tx['id'], tx['total_fee'])
+			#print mosaic
+			_props = getPropsMap(mosaic)
+			v = supplyToValue(_props, tx['delta'])
+			#print v
 
-			#
+			if tx['supplyType'] == 1:
+				self._addMosInout(cur, mosaic['id'], srcId, height, 1+multi, txId, v)
+			else:
+				self._addMosInout(cur, mosaic['id'], srcId, height, 2+multi, txId, v)
+
 		cur = self.conn.cursor()
 		handlers = {
-			257: inoutTransfer
-			, 2049: inoutFee
-			, 4097: inoutFee
-			, 4100: inoutMultisig
+			257: inoutTransfer # transfer
+			, 2049: inoutFee   # importance
+			, 4097: inoutFee   # multisig
+			, 8193: inoutSink  # namespace
+			, 16385: inoutSinkMosaic # mosic creation
+			, 16386: inoutSupply     # mosaicSupply
 		}
 		blockHeight = block['height']
 		for tx in txes:
-			txid = handlers[tx['type']](cur, blockHeight, tx)
+			#print tx
+			txId = tx['id']
+			txType = tx['type']
+			fee = tx['fee']
+			multi = 0
+			# handle multisig
+			if txType == 4100:
+				fee = tx['total_fee']
+				txType = tx['otherTrans']['type']
+				tx = tx['otherTrans']
+				multi = 3
+			txid = handlers[txType](cur, blockHeight, tx, txId, fee, multi)
 		
 		cur.close()
 			
 
 	def _addMultisig(self, cur, block, tx):
 		handlers = {
-			257: self._addTransfer
-			, 2049: self._addDelegated
-			, 4097: self._addAggregateModification
+			    257: self._addTransfer
+			,  2049: self._addDelegated
+			,  4097: self._addAggregateModification
+			,  8193: self._addNamespace
+			, 16385: self._addMosaic
+			, 16386: self._addMosaicSupply
 		}
 		#inner tx
 		itx = tx['otherTrans']
 		if itx['type'] not in handlers:
 			print "ITX TYPE", itx['type']
 		innerId = handlers[itx['type']](cur, block, itx)
+		itx['id'] = innerId
 		totalFee = tx['total_fee']
 
 		#print tx
@@ -351,7 +665,7 @@ CREATE TABLE IF NOT EXISTS harvests
 		sql = "INSERT INTO modifications (block_height,hash,timestamp,timestamp_unix,timestamp_nem, signer_id, signature,deadline, fee, min_cosignatories) VALUES (%s,%s, %s,%s,%s, %s,%s,%s, %s, %s) RETURNING id";
 		locdb = Db(True)
 		ret = locdb.getModification('signer_id', int(tx['signer_id']))
-		if 'minCosignatories' in tx:
+		if ('minCosignatories' in tx) and ('relativeChange' in tx['minCosignatories']):
 			relative = tx['minCosignatories']['relativeChange']
 			if ret is None:
 				print "MODIFICATION NO old, rel is", relative, len(tx['modifications'])
@@ -375,10 +689,10 @@ CREATE TABLE IF NOT EXISTS harvests
 			tx['fee'],
 			min_cosignatories
 		)
-		print " [+] adding to db: ", obj,
+		#print " [+] adding to db: ", obj,
 		cur.execute(sql, obj)
 		retId = cur.fetchone()[0]
-		print retId
+		#print retId
 		sql = "INSERT INTO modification_entries (modification_id,type,cosignatory_id) VALUES(%s,%s,%s)"
 		for modification in tx['modifications']:
 			obj = (retId, modification['modificationType'], modification['cosignatory_id'])
@@ -386,7 +700,161 @@ CREATE TABLE IF NOT EXISTS harvests
 		#
 		return retId
 
+	def _addNamespace(self, cur, block, tx):
+		parent = None
+		if tx['parent']:
+			locdb = Db(True)
+			ret = locdb.getNamespace('namespace_name', tx['parent'])
+			parent = ret
+
+		fqdn = (parent['namespace_name'] + '.' if parent else '') + tx['newPart']
+
+		sql = "INSERT INTO namespaces (block_height,hash, timestamp,timestamp_unix,timestamp_nem, signer_id,signature,deadline,fee, rental_sink, rental_fee, parent_ns, namespace_name, namespace_part) VALUES (%s,%s, %s,%s,%s, %s,%s,%s,%s, %s, %s, %s, %s, %s) RETURNING id"
+		obj = (block['height'],
+			tobin(tx['hash']),
+			tx['timestamp'],
+			tx['timestamp_unix'],
+			tx['timestamp_nem'],
+			tx['signer_id'],
+			None if 'signature' not in tx else tobin(tx['signature']),
+			tx['deadline'],
+			tx['fee'],
+
+			tx['rentalFeeSink_id'],
+			tx['rentalFee'],
+			parent['id'] if parent else None,
+			fqdn,
+			tx['newPart']
+		)
+		#print " [+] adding to db: ", obj,
+		cur.execute(sql,obj)
+		retId = cur.fetchone()[0]
+		#print retId
+		return retId
+	
+	def _addMosaic(self, cur, block, tx):
+		locdb = Db(True)
+		ret = locdb.getNamespace('namespace_name', tx['mosaicDefinition']['id']['namespaceId'])
+		parent = ret
+
+		sql = "INSERT INTO mosaics (block_height,hash, timestamp,timestamp_unix,timestamp_nem, signer_id,signature,deadline,fee, creation_sink, creation_fee, parent_ns, mosaic_name, mosaic_fqdn, mosaic_description) VALUES (%s,%s, %s,%s,%s, %s,%s,%s,%s, %s, %s, %s, %s, %s, %s) RETURNING id"
+		mosaicFqdn = parent['namespace_name'] + '.' + tx['mosaicDefinition']['id']['name']
+		obj = (block['height'],
+			tobin(tx['hash']),
+			tx['timestamp'],
+			tx['timestamp_unix'],
+			tx['timestamp_nem'],
+			tx['signer_id'],
+			None if 'signature' not in tx else tobin(tx['signature']),
+			tx['deadline'],
+			tx['fee'],
+
+			tx['creationFeeSink_id'],
+			tx['creationFee'],
+			parent['id'],
+			tx['mosaicDefinition']['id']['name'],
+			mosaicFqdn,
+			tx['mosaicDefinition']['description']
+		)
+		#print " [+] adding to db: ", obj,
+		cur.execute(sql,obj)
+		retId = cur.fetchone()[0]
+		#print retId
+		
+		sql = "INSERT INTO mosaic_properties (block_height,mosaic_id,name,value) VALUES(%s,%s,%s,%s)"
+		quantity = 0
+		for prop in tx['mosaicDefinition']['properties']:
+			obj = (block['height'],retId, prop['name'], prop['value'])
+			cur.execute(sql,obj)
+			
+			if prop['name'] == 'initialSupply':
+				quantity = int(prop['value'], 10)
+
+		sql = "INSERT INTO mosaic_state_supply (block_height, mosaic_id, quantity) VALUES (%s, %s, %s)"
+		obj = (block['height'], retId, quantity)
+		cur.execute(sql, obj)
+
+		mosLevy = tx['mosaicDefinition']['levy']
+		if 'recipient' in mosLevy:
+			levyMosFqdn = Db._getMosaicFqdn(mosLevy)
+			if levyMosFqdn == mosaicFqdn:
+				levyMosaic = {'id': retId }
+			else:
+				loccur = locdb.conn.cursor()
+				levyMosaic = locdb._getMosaic(loccur, 'mosaic_fqdn', levyMosFqdn)
+				loccur.close()
+			sql = "INSERT INTO mosaic_levys (block_height,mosaic_id, type,recipient_id,fee_mosaic_id,fee) VALUES(%s,%s, %s,%s,%s,%s)"
+			obj = (block['height'],retId, mosLevy['type'],mosLevy['recipient_id'],levyMosaic['id'],mosLevy['fee'])
+			cur.execute(sql,obj)
+
+		return retId
+
+	def _getPreviousStateSupply(self, cur, mosDbId):
+		sql = "SELECT quantity,block_height,id FROM mosaic_state_supply WHERE mosaic_id=%s ORDER BY block_height DESC LIMIT 1"
+		obj = (mosDbId,)
+		cur.execute(sql, obj)
+		return cur.fetchone()
+
+	def _addMosaicSupply(self, cur, block, tx):
+		locdb = Db(True)
+		mosFqdn = Db._getMosaicFqdn(tx)
+		loccur = locdb.conn.cursor()
+		mosaic = locdb._getMosaic(loccur, 'mosaic_fqdn', mosFqdn)
+		loccur.close()
+
+		sql = "INSERT INTO mosaic_supplies (block_height,hash, timestamp,timestamp_unix,timestamp_nem, signer_id,signature,deadline,fee, mosaic_id, supply_type, delta) VALUES (%s,%s, %s,%s,%s, %s,%s,%s,%s, %s,%s,%s) RETURNING id"
+		obj = (block['height'],
+			tobin(tx['hash']),
+			tx['timestamp'],
+			tx['timestamp_unix'],
+			tx['timestamp_nem'],
+			tx['signer_id'],
+			None if 'signature' not in tx else tobin(tx['signature']),
+			tx['deadline'],
+			tx['fee'],
+
+			mosaic['id'],
+			tx['supplyType'],
+			tx['delta']
+		)
+		#print " [+] adding to db: ", obj,
+		cur.execute(sql,obj)
+		retId = cur.fetchone()[0]
+
+		ret = self._getPreviousStateSupply(cur, mosaic['id'])
+		val = ret[0] if ret else 0
+		print "INSERTING ", val, " -> ",
+		if tx['supplyType'] == 1:
+			val += tx['delta']
+		elif tx['supplyType'] == 2:
+			val -= tx['delta']
+		else:
+			print "FAILED ON A TX:"
+			print tx
+			raise 1
+
+		print val
+
+		if ret and ret[1] == block['height']:
+			sql = "UPDATE mosaic_state_supply SET quantity=%s WHERE id=%s"
+			obj = (val, ret[2])
+		else:
+			sql = "INSERT INTO mosaic_state_supply (block_height, mosaic_id, quantity) VALUES (%s, %s, %s)"
+			obj = (block['height'], mosaic['id'], val)
+		cur.execute(sql, obj)
+
+		#print retId
+		return retId
+
+	def _calculateLevy(self, levyType, multiplier, quantity, levyFee):
+		if levyType == 1:
+			return levyFee
+		elif levyType == 2:
+			return multiplier * quantity * levyFee / 10000
+		
+
 	def _addTransfer(self, cur, block, tx):
+		v = tx['version'] & 0xffffff
 		sql = "INSERT INTO transfers (block_height,hash,timestamp,timestamp_unix,timestamp_nem, signer_id, signature,deadline, recipient_id,amount,fee,message_type,message_data) VALUES (%s,%s, %s,%s,%s, %s,%s,%s, %s,%s,%s,%s,%s) RETURNING id";
 		obj = (block['height'],
 			tobin(tx['hash']),
@@ -406,14 +874,37 @@ CREATE TABLE IF NOT EXISTS harvests
 		cur.execute(sql, obj)
 		retId = cur.fetchone()[0]
 		#print retId
+
+		if v == 2:
+			locdb = Db(True)
+			loccur = locdb.conn.cursor()
+			for a in tx['mosaics']:
+				mosFqdn = Db._getMosaicFqdn(a)
+				mosaic = locdb._getMosaic(loccur, 'mosaic_fqdn', mosFqdn)
+				sql = "INSERT INTO transfer_attachments (block_height,transfer_id, type,mosaic_id,quantity) VALUES(%s,%s, %s,%s,%s)"
+
+				assert tx['amount'] % 1000000 == 0, "invalid amount in a tx"
+				amount = tx['amount'] / 1000000
+				obj = (block['height'],retId, 2, mosaic['id'], amount*a['quantity'])
+				cur.execute(sql,obj)
+
+				if mosaic['levy']:
+					levyFee = self._calculateLevy(mosaic['levy']['type'], amount, a['quantity'], mosaic['levy']['fee'])
+					obj = (block['height'],retId, 12, mosaic['levy']['fee_mosaic']['id'], levyFee)
+					cur.execute(sql,obj)
+				
+			loccur.close()
 		return retId
 
 	def _addTxes(self, cur, block, txes):
 		handlers = {
-			257: self._addTransfer
-			, 2049: self._addDelegated
-			, 4097: self._addAggregateModification
-			, 4100: self._addMultisig
+			    257: self._addTransfer
+			,  2049: self._addDelegated
+			,  4097: self._addAggregateModification
+			,  4100: self._addMultisig
+			,  8193: self._addNamespace
+			, 16385: self._addMosaic
+			, 16386: self._addMosaicSupply
 		}
 		for tx in txes:
 			print tx['type']
@@ -497,22 +988,37 @@ CREATE TABLE IF NOT EXISTS harvests
 		cur.close()
 		return data
 
-	def getInoutsNext(self, accId, txId):
+	def getInoutsNext(self, accId, txId,limit):
 		cur = self.conn.cursor()
-		cur.execute('SELECT id FROM inouts WHERE account_id = %s AND type<>3 AND id > %s ORDER BY id DESC LIMIT 10', (accId, txId))
+		cur.execute('SELECT id FROM inouts WHERE account_id = %s AND type<>3 AND id > %s ORDER BY id DESC LIMIT '+str(limit), (accId, txId))
 		data = cur.fetchall()
 		cur.close()
 		return data
 
+	def getAccountMosaics(self, accId, limit):
+		cur = self.conn.cursor()
+		cur.execute('SELECT * FROM (SELECT *,row_number() OVER (PARTITION BY mosaic_id ORDER BY block_height DESC) AS rn FROM mosaic_amounts WHERE account_id=%s) q WHERE amount != 0 AND rn = 1 ORDER BY block_height DESC LIMIT '+str(limit), (accId,))
+		data = cur.fetchall()
+		print data
+		cur.close()
+		return data
 
 	def getTransferSql(self,compare, comparator, limit):
 		return 'SELECT s.printablekey as "s_printablekey",s.publickey as "s_publickey",r.printablekey as "r_printablekey",r.publickey as "r_publickey",t.* FROM transfers t,accounts s,accounts r WHERE t.{}{}%s AND t.signer_id=s.id AND t.recipient_id=r.id ORDER BY id DESC {}'.format(compare,comparator,limit)
 
-	def getMatchingTransfers(self, ids):
+	def getMatchingTransfers(self, ids, limit):
 		cur = self.conn.cursor()
-		cur.execute(self.getTransferSql('id', ' IN ', 'LIMIT 10'), (tuple(ids),))
+		cur.execute(self.getTransferSql('id', ' IN ', 'LIMIT '+str(limit)), (tuple(list(ids)),))
 		#print cur.mogrify(self.getTransferSql('id', ' IN ', 'LIMIT 10'), (tuple(ids),))
 		data = cur.fetchall()
+		cur.execute('SELECT * FROM transfer_attachments t WHERE t.transfer_id IN %s ORDER BY id,type DESC', (tuple(list(ids)),))
+		attachments = cur.fetchall()
+		m = defaultdict(list)
+		for e in attachments:
+			m[e['transfer_id']].append(e)
+		for e in data:
+			if e['id'] in m:
+				e['attachments'] = m[e['id']]
 		cur.close()
 		return data
 	
@@ -520,6 +1026,18 @@ CREATE TABLE IF NOT EXISTS harvests
 		cur = self.conn.cursor()
 		cur.execute(self.getTransferSql(compare, '=', 'LIMIT 1'), (dataCompare,))
 		data = cur.fetchone()
+
+		cur.execute('SELECT * FROM transfer_attachments t WHERE t.transfer_id = %s ORDER BY id,type DESC', (data['id'],))
+		att = cur.fetchall()
+
+		ids = set(map(lambda e: e['mosaic_id'], att))
+		_mosaicDefinitions = self.getMatchingMosaics(ids, 10)
+		m = {}
+		for e in _mosaicDefinitions:
+			m[e['id']] = e
+		data['mosaics'] = m
+		data['attachments'] = att
+
 		cur.close()
 		return data
 		
@@ -546,9 +1064,9 @@ CREATE TABLE IF NOT EXISTS harvests
 		return data
 
 
-	def getTransfers(self, txId):
+	def getTransfers(self, txId, limit):
 		cur = self.conn.cursor()
-		cur.execute(self.getTransferSql('id', '<', 'LIMIT 10'), (txId,))
+		cur.execute(self.getTransferSql('id', '<', 'LIMIT '+str(limit)), (txId,))
 		data = cur.fetchall()
 		cur.close()
 		return data
@@ -563,9 +1081,9 @@ CREATE TABLE IF NOT EXISTS harvests
 	def getDelegateSql(self, compare, comparator, limit):
 		return 'SELECT s.printablekey as "s_printablekey",s.publickey as "s_publickey",r.printablekey as "r_printablekey",r.publickey as "r_publickey",d.* FROM delegates d,accounts s,accounts r WHERE d.{}{}%s AND d.signer_id=s.id AND d.remote_id=r.id ORDER BY id DESC {}'.format(compare, comparator, limit)
 	
-	def getMatchingDelegates(self, ids):
+	def getMatchingDelegates(self, ids, limit):
 		cur = self.conn.cursor()
-		cur.execute(self.getDelegateSql('id', ' IN ', 'LIMIT 10'), (tuple(ids),))
+		cur.execute(self.getDelegateSql('id', ' IN ', 'LIMIT '+str(limit)), (tuple(list(ids)),))
 		data = cur.fetchall()
 		cur.close()
 		return data
@@ -577,9 +1095,9 @@ CREATE TABLE IF NOT EXISTS harvests
 		cur.close()
 		return data
 
-	def getDelegates(self, txId):
+	def getDelegates(self, txId, limit):
 		cur = self.conn.cursor()
-		cur.execute(self.getDelegateSql('id', '<', 'LIMIT 10'), (txId,))
+		cur.execute(self.getDelegateSql('id', '<', 'LIMIT '+str(limit)), (txId,))
 		data = cur.fetchall()
 		cur.close()
 		return data
@@ -592,7 +1110,7 @@ CREATE TABLE IF NOT EXISTS harvests
 		return data
 
 	def _getModificationEntriesCounts(self, cur, txIds):
-		cur.execute('SELECT modification_id,count(*) from modification_entries WHERE modification_id in %s GROUP BY modification_id', (tuple(txIds),))
+		cur.execute('SELECT modification_id,count(*) from modification_entries WHERE modification_id in %s GROUP BY modification_id', (tuple(list(txIds)),))
 		data = cur.fetchall()
 		return data
 
@@ -610,9 +1128,9 @@ CREATE TABLE IF NOT EXISTS harvests
 	def getModificationSql(self, compare, comparator, limit):
 		return 'SELECT s.printablekey as "s_printablekey",s.publickey as "s_publickey",m.* FROM modifications m,accounts s WHERE m.{}{}%s AND m.signer_id=s.id ORDER BY id DESC {}'.format(compare,comparator, limit)
 
-	def getMatchingModifications(self, ids):
+	def getMatchingModifications(self, ids, limit):
 		cur = self.conn.cursor()
-		cur.execute(self.getModificationSql('id', ' IN ', 'LIMIT 10'), (tuple(ids),))
+		cur.execute(self.getModificationSql('id', ' IN ', 'LIMIT '+str(limit)), (tuple(list(ids)),))
 		data = cur.fetchall()
 		cur.close()
 		return data
@@ -629,9 +1147,9 @@ CREATE TABLE IF NOT EXISTS harvests
 		return data
 
 
-	def getModifications(self, txId):
+	def getModifications(self, txId, limit):
 		cur = self.conn.cursor()
-		cur.execute(self.getModificationSql('id', '<', 'LIMIT 10'), (txId,))
+		cur.execute(self.getModificationSql('id', '<', 'LIMIT '+str(limit)), (txId,))
 		data = cur.fetchall()
 		self._addCounts(cur, data)
 		cur.close()
@@ -648,9 +1166,9 @@ CREATE TABLE IF NOT EXISTS harvests
 	def getMultisigSql(self, compare, comparator, limit):
 		return 'SELECT s.printablekey as "s_printablekey",s.publickey as "s_publickey",m.* FROM multisigs m,accounts s WHERE m.{}{}%s AND m.signer_id=s.id ORDER BY id DESC {}'.format(compare,comparator,limit)
 
-	def getMatchingMultisigs(self, ids):
+	def getMatchingMultisigs(self, ids, limit):
 		cur = self.conn.cursor()
-		cur.execute(self.getMultisigSql('id', ' IN ', 'LIMIT 10'), (tuple(ids),))
+		cur.execute(self.getMultisigSql('id', ' IN ', 'LIMIT '+str(limit)), (tuple(list(ids)),))
 		data = cur.fetchall()
 		cur.close()
 		return data
@@ -664,6 +1182,9 @@ CREATE TABLE IF NOT EXISTS harvests
 				257: self.getTransfer
 				, 2049: self.getDelegate
 				, 4097: self.getModification
+				, 8193: self.getNamespace
+				, 16385: self.getMosaic
+				#, 16386: self.getMosaicSupply
 			}
 			data['inner'] = switch[data['inner_type']]('id', data['inner_id'])
 
@@ -673,9 +1194,9 @@ CREATE TABLE IF NOT EXISTS harvests
 		cur.close()
 		return data
 
-	def getMultisigs(self, txId):
+	def getMultisigs(self, txId, limit):
 		cur = self.conn.cursor()
-		cur.execute(self.getMultisigSql('id', '<', 'LIMIT 10'), (txId,))
+		cur.execute(self.getMultisigSql('id', '<', 'LIMIT '+str(limit)), (txId,))
 		data = cur.fetchall()
 		cur.close()
 		return data
@@ -687,27 +1208,167 @@ CREATE TABLE IF NOT EXISTS harvests
 		cur.close()
 		return data
 
+	def getNamespaceSql(self,compare, comparator, limit):
+		return 'SELECT s.printablekey as "s_printablekey",s.publickey as "s_publickey",sink.printablekey as "sink_printablekey",sink.publickey as "sink_publickey",t.* FROM namespaces t,accounts s,accounts sink WHERE t.{}{}%s AND t.signer_id=s.id AND t.rental_sink=sink.id ORDER BY id DESC {}'.format(compare,comparator,limit)
+
+	def getNamespace(self, compare, dataCompare):
+		cur = self.conn.cursor()
+		print cur.mogrify(self.getNamespaceSql(compare, '=', 'LIMIT 1'), (dataCompare,))
+		cur.execute(self.getNamespaceSql(compare, '=', 'LIMIT 1'), (dataCompare,))
+		data = cur.fetchone()
+		cur.close()
+		return data
+
+	def getNamespaces(self, txId, limit):
+		cur = self.conn.cursor()
+		cur.execute(self.getNamespaceSql('id', '<', 'LIMIT '+str(limit)), (txId,))
+		data = cur.fetchall()
+		cur.close()
+		return data
+
+	def getRootNamespaces(self):
+		sql = 'SELECT s.printablekey as "s_printablekey",s.publickey as "s_publickey",sink.printablekey as "sink_printablekey",sink.publickey as "sink_publickey",t.* FROM namespaces t,accounts s,accounts sink WHERE t.parent_ns IS NULL AND t.signer_id=s.id AND t.rental_sink=sink.id ORDER BY t.namespace_name ASC'
+		cur = self.conn.cursor()
+		cur.execute(sql)
+		data = cur.fetchall()
+		cur.close()
+		return data
+
+	def getNamespacesFrom(self, nsId):
+		sql = 'SELECT s.printablekey as "s_printablekey",s.publickey as "s_publickey",sink.printablekey as "sink_printablekey",sink.publickey as "sink_publickey",t.* FROM namespaces t,accounts s,accounts sink WHERE t.parent_ns = %s AND t.signer_id=s.id AND t.rental_sink=sink.id ORDER BY t.namespace_name ASC'
+		cur = self.conn.cursor()
+		cur.execute(sql, (nsId,))
+		data = cur.fetchall()
+		cur.close()
+		return data
+
+
+	def getMosaicSql(self, compare, comparator, limit):
+		return 'SELECT s.printablekey as "s_printablekey",s.publickey as "s_publickey",sink.printablekey as "sink_printablekey",sink.publickey as "sink_publickey",t.* FROM mosaics t,accounts s,accounts sink WHERE t.{}{}%s AND t.signer_id=s.id AND t.creation_sink=sink.id ORDER BY id DESC {}'.format(compare,comparator,limit)
+
+	def getMatchingMosaics(self, ids, limit):
+		cur = self.conn.cursor()
+		cur.execute(self.getMosaicSql('id', ' IN ', 'LIMIT '+str(limit)), (tuple(list(ids)),))
+		data = cur.fetchall()
+
+		cur.execute('SELECT p.mosaic_id as "mosaic_id", p.name as "name",p.value as "value" FROM mosaic_properties p WHERE p.mosaic_id IN %s', (tuple(list(ids)),))
+		_properties = cur.fetchall()
+		properties = defaultdict(list)
+		for e in _properties:
+			properties[e['mosaic_id']].append(e)
+
+
+		#cur.execute('SELECT * FROM mosaic_supplies s WHERE s.mosaic_id IN %s', (tuple(list(ids)),))
+		#_supplies = cur.fetchall()
+
+		sql = "SELECT * FROM (SELECT *,row_number() OVER (PARTITION BY mosaic_id ORDER BY block_height DESC) AS rn FROM mosaic_state_supply WHERE mosaic_id in %s) q where rn = 1"
+		cur.execute(sql, (tuple(list(ids)),))
+		_supplies = cur.fetchall()
+	
+		supplies = {}
+		for e in _supplies:
+			supplies[e['mosaic_id']] = e
+
+		print properties
+		print "--- --- --- --- ---"
+		print supplies
+		print "--- --- --- --- ---"
+
+		for e in data:
+			print e
+			print "---"
+
+			e['properties'] = properties[e['id']]
+			e['properties_count'] = len(e['properties'])
+			e['supply'] = supplies[e['id']]
+
+		cur.close()
+		return data
+	
+	def _getMosaic(self, cur, compare, dataCompare, level=1):
+		cur.execute(self.getMosaicSql(compare, '=', 'LIMIT 1'), (dataCompare,))
+		#print "SQL query: ", cur.mogrify(self.getMosaicSql(compare, '=', 'LIMIT 1'), (dataCompare,))
+		data = cur.fetchone()
+		#print "result", data
+
+		cur.execute('SELECT p.name as "name",p.value as "value" FROM mosaic_properties p WHERE p.mosaic_id = %s', (data['id'],))
+		data['properties'] = cur.fetchall()
+		data['properties_count'] = len(data['properties'])
+
+		#cur.execute('SELECT * FROM mosaic_supplies s WHERE s.mosaic_id = %s', (data['id'],))
+		#data['supplies'] = cur.fetchall()
+		#data['supplies_count'] = len(data['supplies'])
+
+		_supplies = self._getPreviousStateSupply(cur, (data['id'], ))
+		data['supply'] = _supplies
+
+		cur.execute('SELECT r.printablekey as "r_printablekey",r.publickey as "r_publickey", m.block_height,m.type,m.fee_mosaic_id,m.fee,m.recipient_id FROM mosaic_levys m,accounts r WHERE mosaic_id = %s AND m.recipient_id=r.id ', (data['id'],))
+		data['levy'] = cur.fetchone()
+
+		if data['levy']:
+			if level != 0:
+				levyId = data['levy']['fee_mosaic_id']
+				data['levy']['fee_mosaic'] = self._getMosaic(cur, 'id', levyId, level-1)
+			else:
+				data['levy']['fee_mosaic'] = {0:'unavailable'}
+
+			del data['levy']['fee_mosaic_id']
+
+		return data
+
+	def getMosaic(self, compare, dataCompare):
+		cur = self.conn.cursor()
+		data = self._getMosaic(cur, compare, dataCompare)
+
+		cur.execute('SELECT * FROM transfer_attachments t WHERE t.mosaic_id = %s ORDER BY id DESC LIMIT 10', (data['id'],))
+		att = cur.fetchall()
+		ids = set(map(lambda e: e['transfer_id'], att))
+		txes = self.getMatchingTransfers(ids, 10) if len(ids) else []
+		data['txes'] = txes
+		cur.close()
+		return data
+
+
+	def getMosaics(self, txId, limit):
+		cur = self.conn.cursor()
+		cur.execute(self.getMosaicSql('id', '<', 'LIMIT ' + str(limit)), (txId,))
+		data = cur.fetchall()
+		cur.close()
+		return data
+	
+	def getMosaicsFrom(self, nsId):
+		sql = 'SELECT s.printablekey as "s_printablekey",s.publickey as "s_publickey",sink.printablekey as "sink_printablekey",sink.publickey as "sink_publickey",t.* FROM mosaics t,accounts s,accounts sink WHERE t.parent_ns = %s AND t.signer_id=s.id AND t.creation_sink=sink.id ORDER BY t.mosaic_fqdn'
+		cur = self.conn.cursor()
+		cur.execute(sql, (nsId,))
+		data = cur.fetchall()
+		cur.close()
+		return data
+
 	def getTransactionByHash(self, name, txHash):
 		switch = {
 			'transfers': self.getTransfer
 			, 'delegates': self.getDelegate
 			, 'modifications': self.getModification
 			, 'multisigs': self.getMultisig
+			, 'namespaces': self.getNamespace
+			, 'mosaics': self.getMosaic
 		}
 		return switch[name]('hash', tobin(txHash))
 		
-	def getTransactionsByType(self, name, txId):
+	def getTransactionsByType(self, name, txId, limit):
 		switch = {
 			'transfers': self.getTransfers
 			, 'delegates': self.getDelegates
 			, 'modifications': self.getModifications
 			, 'multisigs': self.getMultisigs
+			, 'namespaces': self.getNamespaces
+			, 'mosaics': self.getMosaics
 		}
-		return switch[name](txId)
+		return switch[name](txId, limit)
 
-	def getTableNext(self, table, txId):
+	def getTableNext(self, table, txId, limit):
 		cur = self.conn.cursor()
-		cur.execute('SELECT id FROM '+table+' WHERE id > %s ORDER BY id ASC LIMIT 10', (txId,))
+		cur.execute('SELECT id FROM '+table+' WHERE id > %s ORDER BY id ASC LIMIT '+str(limit), (txId,))
 		data = cur.fetchall()
 		cur.close()
 		return data
@@ -728,7 +1389,7 @@ CREATE TABLE IF NOT EXISTS harvests
 
 	def getAccountsByIds(self, ids):
 		cur = self.conn.cursor()
-		cur.execute('SELECT a.* FROM accounts a WHERE a.id in %s', (tuple(ids),))
+		cur.execute('SELECT a.* FROM accounts a WHERE a.id in %s', (tuple(list(ids)),))
 		data = cur.fetchall()
 		cur.close()
 		return data
@@ -756,7 +1417,7 @@ CREATE TABLE IF NOT EXISTS harvests
 
 	def getHarvestersFees(self, ids):
 		cur = self.conn.cursor()
-		cur.execute("""SELECT i.account_id, cast(CEIL(SUM(i.amount)/1000000) AS BIGINT) as fees FROM inouts i WHERE i.account_id IN %s AND i.type=3 GROUP BY i.account_id""", (tuple(ids),));
+		cur.execute("""SELECT i.account_id, cast(CEIL(SUM(i.amount)/1000000) AS BIGINT) as fees FROM inouts i WHERE i.account_id IN %s AND i.type=3 GROUP BY i.account_id""", (tuple(list(ids)),));
 		data = cur.fetchall()
 		cur.close()
 		return data

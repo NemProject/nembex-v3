@@ -13,28 +13,7 @@ import nemdb
 from tornado.options import define, options
 
 #api
-from webapi.handlers import AccountHandler
-from webapi.handlers import BlocksHandler
-from webapi.handlers import BlocksStatsHandler
-
-from webapi.handlers import AccountTransactionsHandler
-from webapi.handlers import BlockTransactionsHandler
-from webapi.handlers import BlockHandler
-
-from webapi.handlers import MessagesHandler
-from webapi.handlers import TransferHandler
-from webapi.handlers import ImportanceHandler
-from webapi.handlers import AggregateHandler
-from webapi.handlers import MultisigHandler
-
-from webapi.handlers import TransfersHandler
-from webapi.handlers import ImportancesHandler
-from webapi.handlers import AggregatesHandler
-from webapi.handlers import MultisigsHandler
-
-from webapi.handlers import SearchHandler
-from webapi.handlers import HarvestersHandler
-from webapi.handlers import NodesHandler
+from webapi.handlers import *
 
 define("port", default=8888, help="run on the given port", type=int)
 
@@ -64,13 +43,19 @@ if __name__ == '__main__':
          , (r'/api/importance', ImportanceHandler)
          , (r'/api/aggregate', AggregateHandler)
          , (r'/api/multisig', MultisigHandler)
+         , (r'/api/namespace', NamespaceHandler)
+         , (r'/api/mosaic', MosaicHandler)
 
          , (r'/api/messages', MessagesHandler)
          , (r'/api/transfers', TransfersHandler)
          , (r'/api/importances', ImportancesHandler)
          , (r'/api/aggregates', AggregatesHandler)
          , (r'/api/multisigs', MultisigsHandler)
+         , (r'/api/namespaces', NamespacesHandler)
+         , (r'/api/mosaics', MosaicsHandler)
+         , (r'/api/browse', BrowseHandler)
 
+	 , (r'/api/account_mosaics', AccountMosaicsHandler)
          , (r'/api/account_transactions', AccountTransactionsHandler)
          , (r'/api/block_transactions', BlockTransactionsHandler)
          , (r'/api/block', BlockHandler)

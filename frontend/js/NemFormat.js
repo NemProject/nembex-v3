@@ -28,6 +28,31 @@ var NemFormat = function(app) {
 		}
 		data[key + '_fmt'] = o;
 	},
+	fmtQuantity: function(key, data, mosaic) {
+		if (data===null || !(key in data)) { return; }
+		var decimals = mosaic['properties_map']['divisibility'];
+		var o = data[key];
+		if (! o) {
+			o = "0.<span class='dim'>" + "000000".substr(0, decimals) + "</span>";
+		} else {
+			o = o / Math.pow(10, decimals);;
+			var b = o.toFixed(decimals).split('.');
+			var r = "<span class='sep'>" +b[0].split(/(?=(?:...)*$)/).join("</span><span class='sep'>") + "</span>";
+			o = r + "<span class='dim'>." + (b[1] || '') + "</span>";
+
+		}
+		data[key + '_fmt'] = o;
+	},
+	fmtType: function(key, data) {
+		if (data===null || !(key in data)) { return; }
+		var o = data[key];
+		if (o === 12) {
+			o = 'levy';
+		} else {
+			o = '';
+		}
+		data[key + '_fmt'] = o;
+	},
 	fmtNemImportanceScore: function(key,data) {
 		if (!(key in data)) { return; }
 		var o = data[key];
@@ -60,6 +85,12 @@ var NemFormat = function(app) {
 		if (o == 1) { data[key +'_fmt'] = 'ADD'; }
 		if (o == 2) { data[key +'_fmt'] = 'DEL'; }
 	},
+	fmtNemSupplyType: function(key, data) {
+		if (!(key in data)) { return; }
+		var o = data[key];
+		if (o == 1) { data[key +'_fmt'] = 'Create'; }
+		if (o == 2) { data[key +'_fmt'] = 'Destroy'; }
+	},
 	unfmtNemAddress: function(data) {
 		return data.replace(/[^a-zA-Z2-7]/g, "").toUpperCase();
 	},
@@ -91,14 +122,30 @@ var NemFormat = function(app) {
 		}
 		if (data['message_type'] == 2) { data['enc'] = true; }
 	},
+	formatAttachment: function(i, item, transfer, mosaic) {
+		this.fmtQuantity('quantity', item, mosaic);
+		this.fmtType('type', item);
+	},
 	formatTransaction: function(i, item) {
+		// need properties first as they might be needed
+		if ('properties' in item) {
+			var m  = {};
+			$.each(item['properties'], function(i, it){ m[it['name']] = it['value'] });
+			m['initialSupply'] = parseInt(m['initialSupply']);
+			m['divisibility'] = parseInt(m['divisibility']);
+			item['properties_map'] = m;
+		}
+
 		this.fmtNemValue('amount', item);
 		this.fmtNemValue('fee', item);
+		this.fmtNemValue('rental_fee', item);
+		this.fmtNemValue('creation_fee', item);
 		this.fmtNemAddress('s_printablekey', item);
 		this.fmtNemAddress('r_printablekey', item);
 		this.fmtNemImportanceMode('mode', item);
 		this.fmtNemValue('total_fees', item);
 		this.fmtTransactionType('inner_type', item);
+		this.fmtNemSupplyType('supply_type', item);
 		this.fmtMsg(item);
 		if ('modifications' in item) {
 			var _s = this;
@@ -106,6 +153,14 @@ var NemFormat = function(app) {
 				_s.fmtNemModificationType('type', it);
 				_s.fmtNemAddress('printablekey', it);
 			});
+		}
+		if ('properties' in item) {
+			var p = item['properties_map'];
+			item['total_supply'] = item['supply']['quantity'];
+		}
+		if ('levy' in item && item['levy']) {
+			this.fmtNemAddress('r_printablekey', item['levy']);
+			this.formatTransaction(0, item['levy']['fee_mosaic']);
 		}
 	},
 	fmtTime: function(key, data) {

@@ -154,7 +154,13 @@
 		this.get('#/aggregates', function(context) { this.redirect('#/aggregates/0'); });
 		this.get('#/multisigs/', function(context) { this.redirect('#/multisigs/0'); });
 		this.get('#/multisigs', function(context) { this.redirect('#/multisigs/0'); });
-		
+		this.get('#/namespaces/', function(context) { this.redirect('#/namespaces/0'); });
+		this.get('#/namespaces', function(context) { this.redirect('#/namespaces/0'); });
+		this.get('#/mosaics/', function(context) { this.redirect('#/mosaics/0'); });
+		this.get('#/mosaics', function(context) { this.redirect('#/mosaics/0'); });
+
+		this.get('#/browse', function(context) { this.redirect('#/browse/'); });
+
 		this.get('#/account/:account', function(context) { this.redirect('#/account/'+this.params['account']+'/0'); });
 
 
@@ -297,7 +303,19 @@
 				return;
 			}
 			$.getJSON('/api3/transfer', {txhash:hash}, function(items) {
+				// need to do first to have properties_map
 				context.formatTransaction(0,items);
+				$.each(items['mosaics'], function(i, item){
+					context.formatTransaction(i,item);
+				});
+				$.each(items['attachments'], function(j, at){
+					var mosaic = items['mosaics'][at['mosaic_id']];
+					var transfer = items;
+					context.formatAttachment(j, at, transfer, mosaic);
+					at['mosaic'] = mosaic;
+				});
+
+				console.log(items);
 				context.render('t/s.transfer.html',items)
 					.appendTo(context.$element());
 			});
@@ -348,12 +366,60 @@
 					257: 'transfer'
 					, 2049: 'importance'
 					, 4097: 'aggregate'
+					, 8193: 'namespace'
+					, 16385: 'mosaic'
 				};
 				var templateName = 't/s.' + innerTemplate[items['inner_type']] + '.html';
 				context.render('t/s.multisig.html',items)
 					.appendTo(context.$element())
 					.render(templateName, items['inner'])
 					.appendTo("#innerTx")
+			});
+		});
+
+		this.get('#/namespace/:txhash', function(context) {
+			context.app.swap('');
+			setActiveLink('transactions');
+			var hash = context.unfmtHash(this.params['txhash']);
+			if (hash.length != 64) {
+				return;
+			}
+			$.getJSON('/api3/namespace', {txhash:hash}, function(items) {
+				context.formatTransaction(0,items);
+				context.render('t/s.namespace.html',items)
+					.appendTo(context.$element());
+			});
+		});
+
+		this.get('#/mosaic/:txhash/:txid', function(context) {
+			context.app.swap('');
+			setActiveLink('transactions');
+			var hash = context.unfmtHash(this.params['txhash']);
+			if (hash.length != 64) {
+				return;
+			}
+			var t = parseInt(this.params['txid'], 10);
+			if (isNaN(t)) {
+				return;
+			}
+			$.getJSON('/api3/mosaic', {txhash:hash,txid:t}, function(items) {
+				context.formatTransaction(0,items);
+				$.each(items['txes'], function(i,item){ context.formatTransaction(i, item); });
+				$.each(items['txes'], function(i,item){
+					$.each(item['attachments'], function(j, at){
+						var mosaic = items;
+						var transfer = item;
+						context.formatAttachment(j, at, transfer, mosaic);
+						if (at['mosaic_id'] === items['id']) {
+							at['current'] = true;
+						}
+					});
+				});
+
+				items['showNav']=true;
+				context.partial('t/s.mosaic.html',items)
+					.renderEach('t/s.mosaic.detail.html', items['txes'])
+					.appendTo('#transfers');
 			});
 		});
 
@@ -447,6 +513,72 @@
 			});
 		});
 
+		this.get('#/namespaces/:txid', function(context) {
+			var t = parseInt(this.params['txid'], 10);
+			if (isNaN(t)) {
+				return;
+			}
+			context.app.swap('');
+			setActiveLink('transactions');
+
+			$.getJSON('/api3/namespaces', {txid:t}, function(items) {
+				$.each(items['txes'], function(i,item){ context.formatTransaction(i,item); });
+				items['showNav']=true;
+				context.partial('t/namespaces.html', items)
+					.renderEach('t/namespaces.detail.html', items['txes'])
+					.appendTo('#namespaces');
+			});
+		});
+
+		this.get('#/mosaics/:txid', function(context) {
+			var t = parseInt(this.params['txid'], 10);
+			if (isNaN(t)) {
+				return;
+			}
+			context.app.swap('');
+			setActiveLink('transactions');
+
+			$.getJSON('/api3/mosaics', {txid:t}, function(items) {
+				$.each(items['txes'], function(i,item){ context.formatTransaction(i,item); });
+				items['showNav']=true;
+				context.partial('t/mosaics.html', items)
+					.renderEach('t/mosaics.detail.html', items['txes'])
+					.appendTo('#mosaics');
+			});
+		});
+
+		this.get('#/browse/', function(context) {
+			context.app.swap('');
+			setActiveLink('browse');
+			$.getJSON('/api3/browse', {}, function(items) {
+				context.partial('t/browse.html',items)
+					.renderEach('t/browse.ns.detail.html', items['nses'])
+					.appendTo('#browse-ns');
+			});
+		});
+
+		this.get('#/browse/:tld', function(context) {
+			context.app.swap('');
+			setActiveLink('browse');
+			var _tld = this.params['tld'];
+			var tld = _tld.split('.');
+			var result = (tld.length <= 3) && tld.reduce(function(p,c){
+				return p && c.match("^[a-zA-Z0-9][a-zA-Z0-9_-]*");
+			}, true);
+			if (! result) {
+				context.render('t/browse.html')
+					.appendTo(context.$element());
+			} else {
+				$.getJSON('/api3/browse', {name:_tld}, function(items) {
+					context.partial('t/browse.html',items)
+						.renderEach('t/browse.ns.detail.html', items['nses'])
+						.appendTo('#browse-ns')
+						.renderEach('t/browse.ms.detail.html', items['mses'])
+						.appendTo('#browse-ms');
+				});
+			}
+		});
+
 		// shows specified account
 		this.get('#/account/:id/:page', function(context) {
 			context.app.swap('');
@@ -514,6 +646,18 @@
 								.appendTo('#account_transactions')
 						});
 					});
+				});
+				$.getJSON('/api3/account_mosaics', {id:item['raw']['id']}, function(data){
+					$.each(data, function(i, item){
+						context.formatTransaction(i,item['mosaic']);
+					});
+					$.each(data, function(i, item) {
+						context.fmtQuantity('amount', item, item['mosaic']);
+					});
+					return context.render('t/account.mosaics.html')
+						.appendTo('#account_mosaics')
+						.renderEach('t/account.mosaics.detail.html', data)
+						.appendTo('#account_mosaics_list');
 
 				});
 			});

@@ -37,7 +37,7 @@ def getResults(nodes):
 @asyncio.coroutine
 def runAsync():
 	sourceEndpoint = NodeEndpoint.from_parameters('http', config.crawlerSeed, 7890)
-	crawler = NetworkCrawler()
+	crawler = NetworkCrawler(config.network == 'testnet')
 
 	if True:
 		d = yield from crawler.crawl(sourceEndpoint)

@@ -40,10 +40,8 @@ class Updater:
 		sid = self.accounts.addByPublic(srcTx['signer'])
 		srcTx['signer_id'] = sid
 		if 'remoteAccount' in srcTx:
-			did = self.accounts.addByPublic(srcTx['remoteAccount'])
-			print "GOT: did", did
-			srcTx['remote_id'] = did
-			print "for: ", srcTx
+			rid = self.accounts.addByPublic(srcTx['remoteAccount'])
+			srcTx['remote_id'] = rid
 		if 'modifications' in srcTx:
 			for mod in srcTx['modifications']:
 				cid = self.accounts.addByPublic(mod['cosignatoryAccount'])
@@ -52,12 +50,31 @@ class Updater:
 			rid = self.accounts.addByPrint(srcTx['recipient'])
 			srcTx['recipient_id'] = rid
 
+		if 'rentalFeeSink' in srcTx:
+			rid = self.accounts.addByPrint(srcTx['rentalFeeSink'])
+			srcTx['rentalFeeSink_id'] = rid
+			print "fee sink, GOT:", rid
+			print "for: ", srcTx
+
+		if 'creationFeeSink' in srcTx:
+			rid = self.accounts.addByPrint(srcTx['creationFeeSink'])
+			srcTx['creationFeeSink_id'] = rid
+			print "fee sink, GOT:", rid
+			print "for: ", srcTx
+			mosLevy = srcTx['mosaicDefinition']['levy']
+			if 'recipient' in mosLevy:
+				lid = self.accounts.addByPrint(mosLevy['recipient'])
+				mosLevy['recipient_id'] = lid
+				print "levy, acct:", rid
+				print "for: ", srcTx
 
 	def addAllAccounts(self, tx):
 		self._addAccounts(tx)
+		# inner multisig tx
 		if 'otherTrans' in tx:
 			self._addAccounts(tx['otherTrans'])
 
+		# all of signatures
 		if 'signatures' in tx:
 			for sig in tx['signatures']:
 				self._addAccounts(sig)
@@ -149,7 +166,7 @@ class Updater:
 		last = self.p.getLastHeight()
 		localLast = self.db.getLastHeight()
 
-		for i in xrange(localLast+1,last-10):
+		for i in xrange(localLast+1,last-1):
 			self.processedInLastRun += 1
 
 			data = self.p.getBlockAt(i)

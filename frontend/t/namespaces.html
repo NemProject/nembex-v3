@@ -1,9 +1,10 @@
-<h5>Transfer transactions</h5>
-<table id="transfers" class="u-full-width">
+<h5>Namespace provision transactions</h5>
+
+<table id="namespaces" class="u-full-width">
   <thead>
     <tr>
-      <th>Sender /<br> Recipient </th>
-      <th>Amount <br> Fee</th>
+      <th>Issuer <br> (name) </th>
+      <th>Fee</th>
       <th>Height</th>
       <th>Timestamp <br> deadline</th>
     </tr>
@@ -13,14 +14,14 @@
 {{#showNav}}
 <ul id="paging">
 	{{#prev}}
-	<li><a rel="prev" href="#/transfers/{{prev}}">prev page</a></li>
+	<li><a rel="prev" href="#/namespaces/{{prev}}">prev page</a></li>
 	{{/prev}}
 	{{^prev}}
 	<li><a nohref>prev page</a></li>
 	{{/prev}}
 
 	{{#showNext}}
-	<li><a rel="next" href="#/transfers/{{next}}">next page</a></li>
+	<li><a rel="next" href="#/namespaces/{{next}}">next page</a></li>
 	{{/showNext}}
 	{{^showNext}}
 	<li><a nohref>next page</a></li>

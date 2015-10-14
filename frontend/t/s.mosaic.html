@@ -1,0 +1,233 @@
+<h5>Mosaic creation transaction</h5>
+
+<div class="row">
+	<div class="three columns">
+		Block:
+	</div>
+	<div class="eight columns">
+		<a href="#/block/{{block_height}}">{{block_height}}</a>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Hash:
+	</div>
+	<div class="eight columns mono">
+		{{hash}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Sender:
+	</div>
+	<div class="eight columns mono">
+		<a href="#/account/{{s_printablekey}}/0">{{s_printablekey_fmt}}</a>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Mosaic:
+	</div>
+	<div class="eight columns mono">
+		<strong>{{mosaic_fqdn}}</strong>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Current supply:
+	</div>
+	<div class="eight columns mono">
+		<strong>{{total_supply}}</strong>
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Description
+	</div>
+	<div class="eight columns mono">
+		{{mosaic_description}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Fee:
+	</div>
+	<div class="eight columns mono">
+		{{{fee_fmt}}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Creation fee:
+	</div>
+	<div class="eight columns mono">
+		{{{creation_fee_fmt}}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="three columns">
+		Timestamp:
+	</div>
+	<div class="three columns mono">
+		{{{timestamp}}}
+	</div>
+	<div class="three columns">
+		Deadline:
+	</div>
+	<div class="three columns mono">
+		{{{deadline}}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="one column"> </div>
+	<div class="three columns">
+		Initial supply:
+	</div>
+	<div class="eight columns mono">
+		{{properties_map.initialSupply}}.
+	</div>
+</div>
+
+<div class="row">
+	<div class="one column"> </div>
+	<div class="three columns">
+		Divisibility
+	</div>
+	<div class="eight columns mono">
+		{{{properties_map.divisibility}}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="one column"> </div>
+	<div class="three columns">
+		Is supply mutable?
+	</div>
+	<div class="eight columns mono">
+		{{{properties_map.supplyMutable}}}
+	</div>
+</div>
+
+<div class="row">
+	<div class="one column"> </div>
+	<div class="three columns">
+		Is transferable?
+	</div>
+	<div class="eight columns mono">
+		{{{properties_map.transferable}}}
+	</div>
+</div>
+
+<!-- levy -->
+<div class="row">
+	<div class="three columns">
+		Levy data:
+	</div>
+	<div class="eight columns mono">
+	</div>
+</div>
+<div class="row">
+	<div class="one column"> </div>
+	<div class="three columns">
+		levy fee type:
+	</div>
+	<div class="eight columns mono">
+		{{{levy.type}}}
+	</div>
+</div>
+<div class="row">
+	<div class="one column"> </div>
+	<div class="three columns">
+		levy fee amount:
+	</div>
+	<div class="eight columns mono">
+		{{{levy.fee}}}
+	</div>
+</div>
+<div class="row">
+	<div class="one column"> </div>
+	<div class="three columns">
+		levy collector account:
+	</div>
+	<div class="eight columns mono">
+		<a href="#/account/{{levy.r_printablekey}}/0">{{levy.r_printablekey_fmt}}</a>
+	</div>
+</div>
+<div class="row">
+	<div class="one column"> </div>
+	<div class="three columns">
+		levy mosaic:
+	</div>
+	<div class="eight columns mono">
+		<a href="#/mosaic/{{levy.fee_mosaic.hash}}/0"> {{levy.fee_mosaic.mosaic_fqdn}} </a>
+	</div>
+</div>
+
+
+
+{{#signature}}
+<div class="row">
+	<div class="three columns">
+		Signature:
+	</div>
+	<div class="eight columns mono">
+		<small>{{signature}}</small>
+	</div>
+</div>
+{{/signature}}
+
+{{#supplies}}
+<div class="row">
+	<div class="one column">
+	</div>
+	<div class="three columns">
+		{{supply_type_fmt}}
+	</div>
+	<div class="eight columns mono">
+		{{delta}}.
+	</div>
+
+</div>
+{{/supplies}}
+
+<hr />
+
+<h6>Transfer transactions</h6>
+<table id="transfers" class="u-full-width">
+  <thead>
+    <tr>
+      <th>Sender </th>
+      <th>Recipient </th>
+      <th>Height</th>
+    </tr>
+  </thead>
+</table>
+
+{{#showNav}}
+<ul id="paging">
+	{{#prev}}
+	<li><a rel="prev" href="#/transfers/{{prev}}">prev page</a></li>
+	{{/prev}}
+	{{^prev}}
+	<li><a nohref>prev page</a></li>
+	{{/prev}}
+
+	{{#showNext}}
+	<li><a rel="next" href="#/transfers/{{next}}">next page</a></li>
+	{{/showNext}}
+	{{^showNext}}
+	<li><a nohref>next page</a></li>
+	{{/showNext}}
+
+</ul>
+{{/showNav}}
+

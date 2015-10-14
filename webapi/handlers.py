@@ -28,6 +28,8 @@ def fixer(data):
 				elem['hash'] = tostring(elem['hash'])
 			if 'signature' in elem:
 				elem['signature'] = tostring(elem['signature'])
+			if 'sink_publickey' in elem:
+				elem['sink_publickey'] = tostring(elem['sink_publickey'])
 			if 's_publickey' in elem:
 				elem['s_publickey'] = tostring(elem['s_publickey'])
 			if 'r_publickey' in elem:
@@ -50,7 +52,19 @@ def fixer(data):
 			if 'inner' in elem:
 				_fix(elem['inner'])
 
+			if 'supplies' in elem:
+				for e in elem['supplies']:
+					_fix(e)
+			if 'txes' in elem:
+				for e in elem['txes']:
+					_fix(e)
+			if elem.get('levy'):
+				_fix(elem['levy'])
+				_fix(elem['levy']['fee_mosaic'])
 			
+			if 'mosaics' in elem:
+				for e in elem['mosaics'].itervalues():
+					_fix(e)
 		return elem
 	
 	if not isinstance(data, list):
@@ -167,13 +181,13 @@ class BaseHandler(tornado.web.RequestHandler):
 			ret['next'] = 0
 			ret['showNext'] = True
 
-	def getResults(self, table, txId):
-		txes = self.db.getTransactionsByType(table, txId)
+	def getResults(self, table, txId, limit = 10):
+		txes = self.db.getTransactionsByType(table, txId, limit)
 		ret = {'txes':txes}
-		if len(txes) == 10:
+		if len(txes) == limit:
 			ret['prev'] = txes[-1]['id']
-		following = self.db.getTableNext(table, txId)
-		self._getNext(ret, following, 10)
+		following = self.db.getTableNext(table, txId, limit)
+		self._getNext(ret, following, limit)
 		return ret
 
 	def getMessages(self, spammers, txId, limit):
@@ -191,22 +205,35 @@ class BaseHandler(tornado.web.RequestHandler):
 		txes = self.db.getInouts(accId, iid, 10)
 		if len(txes) == 10:
 			ret['prev'] = txes[-1]['id']
-		following = self.db.getInoutsNext(accId, iid)
+		following = self.db.getInoutsNext(accId, iid, 10)
 		self._getNext(ret, following, 10)
 
 		ret['inouts'] = txes
 		ioTransfers = map(lambda x: x['tx_id'], ret['inouts'])
 		if len(ioTransfers):
-			ret['transfers'] = self.db.getMatchingTransfers(ioTransfers)
-			ret['importances'] = self.db.getMatchingDelegates(ioTransfers)
-			ret['aggregates'] = self.db.getMatchingModifications(ioTransfers)
-			ret['multisigs'] = self.db.getMatchingMultisigs(ioTransfers)
+			ret['transfers'] = self.db.getMatchingTransfers(ioTransfers, 10)
+			ret['importances'] = self.db.getMatchingDelegates(ioTransfers, 10)
+			ret['aggregates'] = self.db.getMatchingModifications(ioTransfers, 10)
+			ret['multisigs'] = self.db.getMatchingMultisigs(ioTransfers, 10)
 		else:
 			ret['transfers'] = None
 			ret['importances'] = None
 			ret['aggregates'] = None
 			ret['multisigs'] = None
 		return ret
+
+	def getAccountMosaics(self, accId):
+		accountMosaics = self.db.getAccountMosaics(accId, 10)
+		mosaicIds = map(lambda x: x['mosaic_id'], accountMosaics)
+		_mosaics = self.db.getMatchingMosaics(mosaicIds, 10)
+		mosaics = {}
+		for e in _mosaics:
+			mosaics[e['id']] = e
+
+		for e in accountMosaics:
+			e['mosaic'] = mosaics[ e['mosaic_id'] ]
+		return accountMosaics
+
 
 class BlocksHandler(BaseHandler):
 	@tornado.gen.coroutine
@@ -416,6 +443,72 @@ class MultisigsHandler(BaseHandler):
 		self.write(json.dumps(ret))
 		self.finish()
 
+class NamespaceHandler(BaseHandler):
+	@tornado.gen.coroutine
+	def get(self):
+		txHash = verifyHash(self.get_argument('txhash'))
+		if len(txHash) != 64:
+			self.write(json.dumps({'error':'invalid address'}))
+			self.finish()
+		else:
+			ret = self.getResult('namespaces', txHash)
+			self.write(json.dumps(ret))
+			self.finish()
+
+
+class NamespacesHandler(BaseHandler):
+	@tornado.gen.coroutine
+	def get(self):
+		txId = int(self.get_argument('txid', default='0'), 10)
+		txId = (2**63 - 1) if txId == 0 else txId
+		ret = self.getResults('namespaces', txId)
+		self.write(json.dumps(ret))
+		self.finish()
+
+class MosaicHandler(BaseHandler):
+	@tornado.gen.coroutine
+	def get(self):
+		txHash = verifyHash(self.get_argument('txhash'))
+		if len(txHash) != 64:
+			self.write(json.dumps({'error':'invalid address'}))
+			self.finish()
+		else:
+			ret = self.getResult('mosaics', txHash)
+			self.write(json.dumps(ret))
+			self.finish()
+
+
+class BrowseHandler(BaseHandler):
+	@tornado.gen.coroutine
+	def get(self):
+		_ns = self.get_argument('name', default='')
+		ns = _ns.split('.')
+		pat = re.compile('^[0-9a-zA-z][0-9a-zA-z_-]*')
+		if len(_ns) != 0 and ((len(ns) > 3) or any(map(lambda e: not pat.match(e), ns))):
+			self.write(json.dumps({}))
+			self.finish()
+		else:
+			if len(_ns) == 0:
+				txes = self.db.getRootNamespaces()
+				mses = None
+			else:	
+				root = self.db.getNamespace('namespace_name', _ns)
+				txes = self.db.getNamespacesFrom(root['id'])
+				mses = self.db.getMosaicsFrom(root['id'])
+			ret = {'nses':txes, 'mses':mses}
+			self.write(json.dumps(ret))
+			self.finish()
+
+class MosaicsHandler(BaseHandler):
+	@tornado.gen.coroutine
+	def get(self):
+		txId = int(self.get_argument('txid', default='0'), 10)
+		txId = (2**63 - 1) if txId == 0 else txId
+		ret = self.getResults('mosaics', txId)
+		self.write(json.dumps(ret))
+		self.finish()
+
+
 class BlockTransactionsHandler(BaseHandler):
 	@tornado.gen.coroutine
 	def get(self):
@@ -477,6 +570,15 @@ class AccountTransactionsHandler(BaseHandler):
 		ret = self.getInouts(accId, txId)
 		self.write(json.dumps(ret))
 		self.finish()
+
+class AccountMosaicsHandler(BaseHandler):
+	@tornado.gen.coroutine
+	def get(self):
+		accId = int(self.get_argument('id'), 10)
+		ret = self.getAccountMosaics(accId)
+		self.write(json.dumps(ret))
+		self.finish()
+		
 
 class NodesHandler(BaseHandler):
 	@tornado.gen.coroutine
