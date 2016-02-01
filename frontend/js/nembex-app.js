@@ -88,6 +88,30 @@
 				txes['importances'] = txes['importances'].filter(skip);
 			if (txes['transfers'])
 				txes['transfers'] = txes['transfers'].filter(skip);
+			if (txes['namespaces'])
+				txes['namespaces'] = txes['namespaces'].filter(skip);
+			if (txes['mosaics'])
+				txes['mosaics'] = txes['mosaics'].filter(skip);
+
+			if (txes['mosaics'] && txes['mosaics'].length > 0) {
+				$.each(txes['mosaics'], function(i,item){ context.formatTransaction(i,item); });
+				cbs.push(function() {
+					return context.render('t/mosaics.html')
+						.appendTo(divName)
+						.renderEach('t/mosaics.detail.html', txes['mosaics'])
+						.appendTo('#mosaics');
+				});
+			}
+
+			if (txes['namespaces'] && txes['namespaces'].length > 0) {
+				$.each(txes['namespaces'], function(i,item){ context.formatTransaction(i,item); });
+				cbs.push(function() {
+					return context.render('t/namespaces.html')
+						.appendTo(divName)
+						.renderEach('t/namespaces.detail.html', txes['namespaces'])
+						.appendTo('#namespaces');
+				});
+			}
 
 			if (txes['multisigs'] && txes['multisigs'].length > 0) {
 				$.each(txes['multisigs'], function(i,item){ context.formatTransaction(i,item); });
@@ -167,7 +191,7 @@
 		this.get('#/search/:data', function(context) {
 			context.app.swap('');
 			var fixedData = this.params['data'].replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-			if (fixedData.length && fixedData[0] == 'N') {
+			if (fixedData.length && ('MNT'.indexOf(fixedData[0]) !== -1)) {
 				app.runRoute('get', '#/account/'+fixedData+'/0');
 				return;
 			}
@@ -315,7 +339,6 @@
 					at['mosaic'] = mosaic;
 				});
 
-				console.log(items);
 				context.render('t/s.transfer.html',items)
 					.appendTo(context.$element());
 			});
@@ -403,6 +426,7 @@
 				return;
 			}
 			$.getJSON('/api3/mosaic', {txhash:hash,txid:t}, function(items) {
+				console.log(items);
 				context.formatTransaction(0,items);
 				$.each(items['txes'], function(i,item){ context.formatTransaction(i, item); });
 				$.each(items['txes'], function(i,item){
@@ -679,7 +703,6 @@
 
 				$.getJSON('/api3/block_transactions', {height:t}, function(txes) {
 					renderTxes(context, '#block_transactions', txes, function(cbs) {
-						
 					});
 				});
 			});

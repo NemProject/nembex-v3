@@ -1031,10 +1031,11 @@ class Db:
 		att = cur.fetchall()
 
 		ids = set(map(lambda e: e['mosaic_id'], att))
-		_mosaicDefinitions = self.getMatchingMosaics(ids, 10)
 		m = {}
-		for e in _mosaicDefinitions:
-			m[e['id']] = e
+		if len(ids) > 0:
+			_mosaicDefinitions = self.getMatchingMosaics(ids, 10)
+			for e in _mosaicDefinitions:
+				m[e['id']] = e
 		data['mosaics'] = m
 		data['attachments'] = att
 
@@ -1226,6 +1227,14 @@ class Db:
 		cur.close()
 		return data
 
+	def getBlockNamespaces(self, height):
+		cur = self.conn.cursor()
+		cur.execute(self.getNamespaceSql('block_height', '=', ''), (height,))
+		data = cur.fetchall()
+		cur.close()
+		return data
+
+
 	def getRootNamespaces(self):
 		sql = 'SELECT s.printablekey as "s_printablekey",s.publickey as "s_publickey",sink.printablekey as "sink_printablekey",sink.publickey as "sink_publickey",t.* FROM namespaces t,accounts s,accounts sink WHERE t.parent_ns IS NULL AND t.signer_id=s.id AND t.rental_sink=sink.id ORDER BY t.namespace_name ASC'
 		cur = self.conn.cursor()
@@ -1336,6 +1345,14 @@ class Db:
 		cur.close()
 		return data
 	
+	def getBlockMosaics(self, height):
+		cur = self.conn.cursor()
+		cur.execute(self.getMosaicSql('block_height', '=', ''), (height,))
+		data = cur.fetchall()
+		cur.close()
+		return data
+
+
 	def getMosaicsFrom(self, nsId):
 		sql = 'SELECT s.printablekey as "s_printablekey",s.publickey as "s_publickey",sink.printablekey as "sink_printablekey",sink.publickey as "sink_publickey",t.* FROM mosaics t,accounts s,accounts sink WHERE t.parent_ns = %s AND t.signer_id=s.id AND t.creation_sink=sink.id ORDER BY t.mosaic_fqdn'
 		cur = self.conn.cursor()

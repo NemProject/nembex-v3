@@ -518,6 +518,8 @@ class BlockTransactionsHandler(BaseHandler):
 		ret['importances'] = self.db.getBlockDelegates(height)
 		ret['aggregates'] = self.db.getBlockModifications(height)
 		ret['multisigs'] = self.db.getBlockMultisigs(height)
+		ret['namespaces'] = self.db.getBlockNamespaces(height)
+		ret['mosaics'] = self.db.getBlockMosaics(height)
 		self.write(json.dumps(ret))
 		self.finish()
 
