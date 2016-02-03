@@ -158,7 +158,7 @@ class Db:
 
 		cur.execute("CREATE INDEX mosaic_inouts_type_idx on mosaic_inouts(type)");
 
-		cur.execute("select * from accounts where printablekey = 'TBULEAUG2CZQISUR442HWA6UAKGWIXHDABJVIPS4'");
+		cur.execute("select * from accounts where printablekey = '%s'" % config.nemesis);
 		nId = cur.fetchone()[0]
 		NA = bytearray('n/a')
 		cur.execute("INSERT INTO namespaces (block_height, hash, timestamp, timestamp_unix, timestamp_nem, signer_id, signature, deadline, fee, rental_sink, rental_fee, parent_ns, namespace_name, namespace_part) VALUES (%s,%s, %s,%s,%s,%s,%s,%s, %s,%s,%s,%s,%s,%s) RETURNING id", (1,NA, '2015-03-29 00:06:25',1427587585,0,nId,NA,0, 0,nId,0,None,"nem","nem"))
@@ -1427,7 +1427,7 @@ class Db:
 
 	def getHarvestersByCount(self):
 		cur = self.conn.cursor()
-		cur.execute("""SELECT COUNT(h.block_height) AS harvestedblocks,a.id from harvests h,accounts a where a.id=h.account_id GROUP BY a.id ORDER BY harvestedblocks DESC LIMIT 50""")
+		cur.execute("""SELECT COUNT(h.block_height) AS harvestedblocks,MAX(h.block_height) AS lastBlock,a.id from harvests h,accounts a where a.id=h.account_id GROUP BY a.id ORDER BY harvestedblocks DESC LIMIT 50""")
 		data = cur.fetchall()
 		cur.close()
 		return data
