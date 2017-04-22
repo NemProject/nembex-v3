@@ -27,8 +27,8 @@ def getResults(nodes):
 			print(v)
 		else:
 			d = v['node']
-			if isValidIp(d['endpoint']['host']):
-				d['endpoint']['host'] = '.'.join(d['endpoint']['host'].split('.')[0:2] + ['xx', 'xx'])
+			#if isValidIp(d['endpoint']['host']):
+			#	d['endpoint']['host'] = '.'.join(d['endpoint']['host'].split('.')[0:2] + ['xx', 'xx'])
 			d['nisInfo'] = v['nisInfo']
 			result.append(d)
 	print(" [+] {0} nodes collected".format(len(result)))
@@ -40,7 +40,11 @@ def runAsync():
 	crawler = NetworkCrawler(config.network == 'testnet')
 
 	if True:
-		d = yield from crawler.crawl(sourceEndpoint)
+		try:
+			d = yield from crawler.crawl(sourceEndpoint)
+		except Exception as e:
+			print("MAIN Exception: {0}".format(e))
+
 		crawler.reset()
 		result = getResults(crawler.counter.values())
 		end = datetime.utcnow()
