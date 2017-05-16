@@ -9,6 +9,10 @@ var NemFormat = function(app) {
 			str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
 		return str;
 	},
+	fmtHexToUtf8: function(data) {
+		if (data === undefined) return data;
+		return decodeURIComponent(escape( this.hex2a(data) ));
+	},
 	fmtNemHeight: function(key, data) {
 		if (!(key in data)) { return; }
 		var o = data[key].toString();
@@ -117,7 +121,7 @@ var NemFormat = function(app) {
 				data['message_data_fmt'] = data['message_data'].substring(2);
 				data['message_hex'] = true;
 			} else {
-				data['message_data_fmt'] = this.hex2a(data['message_data']);
+				data['message_data_fmt'] = this.fmtHexToUtf8(data['message_data']);
 			}
 		}
 		if (data['message_type'] == 2) { data['enc'] = true; }
