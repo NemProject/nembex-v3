@@ -1,0 +1,16 @@
+		{{^raw.other}}
+		<div class="four columns textr">
+			{{meta.remoteStatus}}
+		</div>
+		{{/raw.other}}
+		{{#raw.other}}
+		<div class="nine columns">
+			{{raw.other.text}}:
+			<a class='mono' href="#/account/{{raw.other.printablekey_fmt}}/0">{{raw.other.printablekey_fmt}}</a><br>
+			<span class='dim'>started at: {{raw.other.start_height}}</span>
+			{{#raw.other.stop_height}}
+			stopped at: {{raw.other.stop_height}}
+			{{/raw.other.stop_height}}
+		</div>
+		{{/raw.other}}
+

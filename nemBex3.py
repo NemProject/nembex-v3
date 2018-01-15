@@ -64,6 +64,7 @@ if __name__ == '__main__':
 
          , (r'/api/harvesters', HarvestersHandler)
          , (r'/api/account', AccountHandler)
+         , (r'/api/account_net', AccountNetHandler)
          
 	 , (r'/api/nodes', NodesHandler)
         ], 

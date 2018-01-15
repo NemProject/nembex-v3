@@ -36,10 +36,12 @@ def getResults(nodes):
 
 @asyncio.coroutine
 def runAsync():
-	sourceEndpoint = NodeEndpoint.from_parameters('http', config.crawlerSeed, 7890)
-	crawler = NetworkCrawler(config.network == 'testnet')
+	index = 0
+	while index < len(config.nodes):
+		crawlerSeed = config.nodes[index]
+		sourceEndpoint = NodeEndpoint.from_parameters('http', crawlerSeed, 7890)
+		crawler = NetworkCrawler(config.network == 'testnet')
 
-	if True:
 		try:
 			d = yield from crawler.crawl(sourceEndpoint)
 		except Exception as e:
@@ -48,8 +50,14 @@ def runAsync():
 		crawler.reset()
 		result = getResults(crawler.counter.values())
 		end = datetime.utcnow()
+		index += 1
+
+		if not result:
+			continue
+
 		with open('nodes_dump-'+config.network+'.json', 'w') as output:
 			output.write(json.dumps({'nodes_last_time':end, 'active_nodes':result}))
+		break
 
 def crawlNetwork():
 	loop = asyncio.get_event_loop()

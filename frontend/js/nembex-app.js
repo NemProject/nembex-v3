@@ -64,6 +64,21 @@
 				break;
 			}
 		});
+		
+		$.getJSON('/api3/blocks', {}, function(items) {
+			var h = items[0]['height'];
+			var nextForkHeight = 1250000;
+			if (h > nextForkHeight) {
+				$('#fork').append("<strong>LAST FORK was at (1'250'000), NEWEST RELEASE: <h2><a href='https://nem.io/install.html'>0.6.95</a></h2></strong>");
+			} else {
+				var d = nextForkHeight - h;
+				var days = Math.floor(d / 1440);
+				var mins = d - (days * 1440)
+				var hours = Math.floor(mins / 60);
+				mins = mins - (hours * 60);
+				$('#fork').append("approximately in " + days + " day(s), " + hours + " hour(s) " + mins + " minut(es) <small class='dim'>(" + d + ") blocks</small>");
+			}
+		});
 	}
 
 	init();
@@ -619,16 +634,6 @@
 
 			$.getJSON('/api3/account', {address:addr}, function(item) {
 				context.fmtNemAddress('printablekey', item['raw']);
-				context.fmtNemValue('balance', item['account']);
-				context.fmtNemValue('vestedBalance', item['account']);
-				context.fmtNemImportanceScore('importance', item['account']);
-				$.each(item['meta']['cosignatoryOf'], function(i, it){
-					context.fmtNemAddress('address', it);
-					context.fmtNemValue('balance', it);
-				});
-				$.each(item['meta']['cosignatories'], function(i, it){
-					context.fmtNemAddress('address', it);
-				});
 
 				var dest = {};
 				var ref = item['raw']['balance'];
@@ -645,18 +650,40 @@
 				$.each(item['raw']['balance'], function(i, it) {
 					context.fmtNemValue(i, item['raw']['balance']);
 				});
-				if ('other' in item['raw']) {
-					if (item['meta']['remoteStatus'] == 'ACTIVE') {
-						item['raw']['other']['text'] = 'ACTIVE using';
-					}
-					else if (item['meta']['remoteStatus'] == 'REMOTE') {
-						item['raw']['other']['text'] = 'REMOTE for';
-					}
-					context.fmtNemAddress('printablekey', item['raw']['other']);
-				}
 
 				context.render('t/account.html',item)
 					.appendTo(context.$element());
+
+				$.getJSON('/api3/account_net', {address:addr}, function(item) {
+                                        context.fmtNemValue('balance', item['account']);
+                                        context.fmtNemValue('vestedBalance', item['account']);
+                                        context.fmtNemImportanceScore('importance', item['account']);
+                                        $.each(item['meta']['cosignatoryOf'], function(i, it){
+                                                context.fmtNemAddress('address', it);
+                                                context.fmtNemValue('balance', it);
+                                        });
+                                        $.each(item['meta']['cosignatories'], function(i, it){
+                                                context.fmtNemAddress('address', it);
+                                        });
+					if ('other' in item['raw']) {
+						if (item['meta']['remoteStatus'] == 'ACTIVE') {
+							item['raw']['other']['text'] = 'ACTIVE using';
+						}
+						else if (item['meta']['remoteStatus'] == 'REMOTE') {
+							item['raw']['other']['text'] = 'REMOTE for';
+						}
+						context.fmtNemAddress('printablekey', item['raw']['other']);
+					}
+
+					context.render('t/account.net1.html', item)
+						.replace('#net1');
+					context.render('t/account.net2.html', item)
+						.replace('#net2');
+					context.render('t/account.net3.html', item)
+						.replace('#net3');
+					context.render('t/account.cosig.html', item)
+						.replace('#cosig');
+                                });
 
 				$.getJSON('/api3/account_transactions', {id:item['raw']['id'],iid:inoutsId}, function(txes) {
 

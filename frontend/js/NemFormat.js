@@ -196,7 +196,7 @@ var NemFormat = function(app) {
 		}
 	},
 	fmtNodeVersion: function(item) {
-		var latest = [0, 6, 42];
+		var latest = [0, 6, 95];
 		var v = item['metaData']['version'];
 		item['metaData']['version_fmt'] = v;
 		var v2 = v.split(/-/);
@@ -206,15 +206,19 @@ var NemFormat = function(app) {
 			return;
 		}
 		var v3 = v2[0].split(/\./).map(function(x){return parseInt(x);});
-		if (v3[1] !== latest[1]) {
+	
+		var h = latest[2] - v3[2];
+
+		if (v3[1] !== latest[1] || h > 4) {
 			item['metaData']['version_fmt'] = '<span style="color:red">' + item['metaData']['version_fmt'] + '</span>';
 			return;
 		}
-		
-		var h = latest[2] - v3[2];
-		if (h <= 4 && h>1) {
+	
+		if (0 == h) {
+			item['metaData']['version_fmt'] = '<span style="color:#41ce7b">' + item['metaData']['version_fmt'] + '</span>';
+		} else if (1 == h) {
 			item['metaData']['version_fmt'] = '<span style="color:#dfa82f">' + item['metaData']['version_fmt'] + '</span>';
-		} else if (h > 3) {
+		} else if (h > 0) {
 			item['metaData']['version_fmt'] = '<span style="color:#c60">' + item['metaData']['version'] + '</span>';
 		}
 	},

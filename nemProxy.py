@@ -35,6 +35,9 @@ class NemProxy:
 				time.sleep(1)
 				print " re-attempting call to getBlockHeight"
 
+		if not res:
+			return None
+
 		r = res[0]
 		for o in res[1:]:
 			if r != o:

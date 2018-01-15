@@ -117,7 +117,15 @@ ul#paging li a[nohref] { color: #c7c8c7; }
 #nodes .nodename {
 	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 	padding-left:20px;
+	max-width: 440px;
 }
+
+#nodes .addr {
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+	padding-left:20px;
+	max-width: 100px;
+}
+
 
 #nodes a { color:#41ce7b; }
 #nodes a:hover { color:#74FFAE; }

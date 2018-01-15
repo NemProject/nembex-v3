@@ -165,8 +165,10 @@ class Updater:
 	def _run(self):
 		last = self.p.getLastHeight()
 		localLast = self.db.getLastHeight()
+		print('last height vs nembex height', last, localLast)
 
-		for i in xrange(localLast+1,last-1):
+		for i in xrange(localLast+1,last-3):
+			print('height', i)
 			self.processedInLastRun += 1
 
 			data = self.p.getBlockAt(i)

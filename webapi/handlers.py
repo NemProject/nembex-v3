@@ -225,7 +225,9 @@ class BaseHandler(tornado.web.RequestHandler):
 	def getAccountMosaics(self, accId):
 		accountMosaics = self.db.getAccountMosaics(accId, 10)
 		mosaicIds = map(lambda x: x['mosaic_id'], accountMosaics)
-		_mosaics = self.db.getMatchingMosaics(mosaicIds, 10)
+		_mosaics = {}
+		if len(mosaicIds) > 0:
+			_mosaics = self.db.getMatchingMosaics(mosaicIds, 10)
 		mosaics = {}
 		for e in _mosaics:
 			mosaics[e['id']] = e
@@ -313,8 +315,7 @@ def addRemoteInfo(db, mode, remId, dest):
 		if stopH:
 			dest['other']['stop_height'] = stopH
 		
-
-class AccountHandler(BaseHandler):
+class AccountNetHandler(BaseHandler):
 	@tornado.gen.coroutine
 	def get(self):
 		addr = verifyAddr(self.get_argument('address'))
@@ -329,14 +330,32 @@ class AccountHandler(BaseHandler):
 			else:
 				raw = self.db.getAccount(addr)
 				ret['raw'] = raw
-				if raw != None:
+				if raw != None:	
 					if ret['meta']['remoteStatus'] in ('ACTIVE', 'REMOTE'):
 						addRemoteInfo(self.db, ret['meta']['remoteStatus'], raw['id'], ret['raw'])
-				
 					ret['raw']['harvestedBlocks'] = self.db.getHarvestedBlocksCount(raw['id'])
 					ret['raw']['balance'] = self.db.getHarvestedBlocksReward(raw['id'])
 				self.write(json.dumps(ret))
 				self.finish()
+
+
+class AccountHandler(BaseHandler):
+	@tornado.gen.coroutine
+	def get(self):
+		addr = verifyAddr(self.get_argument('address'))
+		if len(addr) != 40:
+			self.write(json.dumps({'error':'invalid address'}))
+			self.finish()
+		else:
+			ret = {}
+			raw = self.db.getAccount(addr)
+			ret['raw'] = raw
+			if raw != None:	
+				ret['raw']['harvestedBlocks'] = self.db.getHarvestedBlocksCount(raw['id'])
+				ret['raw']['balance'] = self.db.getHarvestedBlocksReward(raw['id'])
+				pass
+			self.write(json.dumps(ret))
+			self.finish()
 
 def verifyHash(txHash):
 	return re.sub(r'[^0-9A-F]', "", txHash.upper())

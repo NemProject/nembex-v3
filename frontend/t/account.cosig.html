@@ -1,0 +1,40 @@
+	{{#meta.cosignatoryOf.length}}
+	<div class="row">
+		<div class="twelve columns">
+		Cosignatory of:
+		</div>
+	</div>
+	{{#meta.cosignatoryOf}}
+	<div class="row">
+		<div class="one columns">&nbsp;
+		</div>
+		<div class="eight columns mono">
+			<a href="#/account/{{address}}/0">{{address_fmt}}</a>
+		</div>
+		<div class="three columns textr">
+			{{{balance_fmt}}} <span class='dim'>XEM</span>
+		</div>
+	</div>
+	{{/meta.cosignatoryOf}}
+	{{/meta.cosignatoryOf.length}}
+
+	{{#meta.cosignatories.length}}
+	<div class="row">
+		<div class="six columns">
+		List of cosignatories
+		</div>
+		<div class="six columns">
+		(required {{account.multisigInfo.minCosignatories}})
+		</div>
+	</div>
+	{{#meta.cosignatories}}
+	<div class="row">
+		<div class="one columns">&nbsp;
+		</div>
+		<div class="eight columns mono">
+			<a href="#/account/{{address}}/0">{{address_fmt}}</a>
+		</div>
+	</div>
+	{{/meta.cosignatories}}
+	{{/meta.cosignatories.length}}
+

@@ -11,6 +11,7 @@ TIMEOUT_VALUE=4
 
 class NetworkCrawler:
 	allNodes = {}
+	allFutures = {}
 	allInfo = {}
 	counter = {}
 
@@ -20,6 +21,7 @@ class NetworkCrawler:
 	def reset(self):
 		self.counter = self.allInfo
 		self.allNodes = {}
+		self.allFutures = {}
 		self.allInfo = {}
 
 	@asyncio.coroutine
@@ -37,9 +39,14 @@ class NetworkCrawler:
 			futures = []
 			for peer in peers['active']:
 				peer_endpoint = NodeEndpoint.from_json(peer['endpoint'])
-				futures.append(self.crawl(peer_endpoint))
+				if peer_endpoint.url() not in self.allFutures:
+					#print(peer_endpoint.url())
+					self.allFutures[peer_endpoint.url()] = True
+					futures.append(self.crawl(peer_endpoint))
 
-			yield from asyncio.wait(futures, return_when=ALL_COMPLETED)
+			#print('yield, added', len(futures), len(self.allFutures))
+			if futures:
+				yield from asyncio.wait(futures, return_when=ALL_COMPLETED)
 
 		except aiohttp.errors.ClientOSError as err:
 			logging.warning('peerList, error detected: {0} {1}'.format(endpointUrl, str(err)))

@@ -1,4 +1,5 @@
 import psycopg2
+from datetime import datetime
 from binascii import hexlify
 from psycopg2.extras import RealDictConnection
 from config import config
@@ -150,7 +151,10 @@ class Db:
 		cur.execute("CREATE INDEX mosaic_properties_mosaic_idx ON mosaic_properties(mosaic_id)");
 		cur.execute("CREATE INDEX transfer_attachments_blockheight_idx ON transfer_attachments(block_height)");
 		cur.execute('CREATE INDEX inouts_blockheight_idx ON inouts(block_height)')
+		cur.execute('CREATE INDEX inouts_account_id_idx ON inouts(account_id)')
+		cur.execute('CREATE INDEX inouts_account_id_3_idx ON inouts(account_id) WHERE type = 3')
 		cur.execute('CREATE INDEX harvests_blockheight_idx ON harvests(block_height)')
+		cur.execute('CREATE INDEX harvests_account_id_idx ON harvests(account_id)')
 
 
 		cur.execute("CREATE INDEX transfer_attachments_mosaic_idx ON transfer_attachments(mosaic_id)");
@@ -883,13 +887,12 @@ class Db:
 				mosaic = locdb._getMosaic(loccur, 'mosaic_fqdn', mosFqdn)
 				sql = "INSERT INTO transfer_attachments (block_height,transfer_id, type,mosaic_id,quantity) VALUES(%s,%s, %s,%s,%s)"
 
-				assert tx['amount'] % 1000000 == 0, "invalid amount in a tx"
-				amount = tx['amount'] / 1000000
-				obj = (block['height'],retId, 2, mosaic['id'], amount*a['quantity'])
+				assert (a['quantity'] * tx['amount']) % 1000000 == 0, "invalid amount in a tx"
+				obj = (block['height'],retId, 2, mosaic['id'], tx['amount']*a['quantity'] / 1000000 )
 				cur.execute(sql,obj)
 
 				if mosaic['levy']:
-					levyFee = self._calculateLevy(mosaic['levy']['type'], amount, a['quantity'], mosaic['levy']['fee'])
+					levyFee = self._calculateLevy(mosaic['levy']['type'], tx['amount'], a['quantity'], mosaic['levy']['fee'])
 					obj = (block['height'],retId, 12, mosaic['levy']['fee_mosaic']['id'], levyFee)
 					cur.execute(sql,obj)
 				
@@ -907,10 +910,15 @@ class Db:
 			, 16386: self._addMosaicSupply
 		}
 		for tx in txes:
-			print tx['type']
+			print ('processing tx', tx['type'])
 			txid = handlers[tx['type']](cur, block, tx)
 			tx['id'] = txid
-		
+			# ugly hack for multiple txes in same block :/
+			if tx['type'] == 8193 or tx['type'] == 16386:
+				cur.close()
+				self.commit()
+				cur = self.conn.cursor()
+
 	def processTxes(self, block, txes):
 		cur = self.conn.cursor()
 		self._addTxes(cur, block, txes)
@@ -1026,18 +1034,18 @@ class Db:
 		cur = self.conn.cursor()
 		cur.execute(self.getTransferSql(compare, '=', 'LIMIT 1'), (dataCompare,))
 		data = cur.fetchone()
+		if data:
+			cur.execute('SELECT * FROM transfer_attachments t WHERE t.transfer_id = %s ORDER BY id,type DESC', (data['id'],))
+			att = cur.fetchall()
 
-		cur.execute('SELECT * FROM transfer_attachments t WHERE t.transfer_id = %s ORDER BY id,type DESC', (data['id'],))
-		att = cur.fetchall()
-
-		ids = set(map(lambda e: e['mosaic_id'], att))
-		m = {}
-		if len(ids) > 0:
-			_mosaicDefinitions = self.getMatchingMosaics(ids, 10)
-			for e in _mosaicDefinitions:
-				m[e['id']] = e
-		data['mosaics'] = m
-		data['attachments'] = att
+			ids = set(map(lambda e: e['mosaic_id'], att))
+			m = {}
+			if len(ids) > 0:
+				_mosaicDefinitions = self.getMatchingMosaics(ids, 10)
+				for e in _mosaicDefinitions:
+					m[e['id']] = e
+			data['mosaics'] = m
+			data['attachments'] = att
 
 		cur.close()
 		return data
@@ -1391,10 +1399,12 @@ class Db:
 		return data
 
 	def getAccount(self, address):
+		start = datetime.now()
 		cur = self.conn.cursor()
 		cur.execute('SELECT a.* FROM accounts a WHERE a.printablekey = %s', (address,))
 		data = cur.fetchone()
 		cur.close()
+		print "time get", (datetime.now() - start).microseconds
 		return data
 
 	def getAccountById(self, accid):
@@ -1412,31 +1422,38 @@ class Db:
 		return data
 
 	def getHarvestedBlocksCount(self, accid):
+		start = datetime.now()
 		cur = self.conn.cursor()
 		cur.execute('SELECT COUNT(*) AS "harvested_count" FROM harvests WHERE account_id = %s', (accid,))
 		data = cur.fetchone()['harvested_count']
 		cur.close()
+		print "time count", (datetime.now() - start).microseconds
 		return data
 
 	def getHarvestedBlocksReward(self, accid):
+		start = datetime.now()
 		cur = self.conn.cursor()
 		cur.execute('SELECT type,cast(SUM(amount) as bigint) AS "sum" FROM inouts WHERE account_id=%s GROUP BY type', (accid,))
 		data = cur.fetchall()
 		cur.close()
+		print "time reward", (datetime.now() - start).microseconds
 		return data
 
 	def getHarvestersByCount(self):
 		cur = self.conn.cursor()
-		cur.execute("""SELECT COUNT(h.block_height) AS harvestedblocks,MAX(h.block_height) AS lastBlock,a.id from harvests h,accounts a where a.id=h.account_id GROUP BY a.id ORDER BY harvestedblocks DESC LIMIT 50""")
+		cur.execute("""SELECT COUNT(h.block_height) AS harvestedblocks,MAX(h.block_height) AS lastBlock,h.account_id as id from harvests h GROUP BY h.account_id ORDER BY harvestedblocks DESC LIMIT 50""");
+		#cur.execute("""SELECT COUNT(h.block_height) AS harvestedblocks,MAX(h.block_height) AS lastBlock,a.id from harvests h,accounts a where a.id=h.account_id GROUP BY a.id ORDER BY harvestedblocks DESC LIMIT 50""")
 		data = cur.fetchall()
 		cur.close()
 		return data
 
 	def getHarvestersFees(self, ids):
+		start = datetime.now()
 		cur = self.conn.cursor()
 		cur.execute("""SELECT i.account_id, cast(CEIL(SUM(i.amount)/1000000) AS BIGINT) as fees FROM inouts i WHERE i.account_id IN %s AND i.type=3 GROUP BY i.account_id""", (tuple(list(ids)),));
 		data = cur.fetchall()
 		cur.close()
+		print "time fees", (datetime.now() - start).microseconds
 		return data
 		
 
