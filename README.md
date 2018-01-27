@@ -85,5 +85,5 @@ You can either point nginx to frontend dir, or copy the content where you want i
 async
 -----
 
-The node collector needs python3.4. How to start is is beyond the scope of this doc.
+The node collector needs python3.4. How to start is beyond the scope of this doc.
 
