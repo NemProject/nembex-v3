@@ -3,11 +3,35 @@ var NemFormat = function(app) {
 
 	this.helpers({
 	hex2a: function (hexx) {
-		var hex = hexx.toString();
-		var str = '';
-		for (var i = 0; i < hex.length; i += 2)
-			str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
-		return str;
+		var	arr = [];
+
+		for (var i = 0; i < hexx.length; i+=2) {
+			arr.push(parseInt(hexx.substr(i,2), 16));
+		}
+		
+		if (arr == null)
+			return null;
+		var result = "";
+		var i;
+		while (i = arr.shift()) {
+		if (i <= 0x7f) {
+			result += String.fromCharCode(i);
+		} else if (i <= 0xdf) {
+			var c = ((i&0x1f)<<6);
+			c += arr.shift()&0x3f;
+			result += String.fromCharCode(c);
+		} else if (i <= 0xe0) {
+			var c = ((arr.shift()&0x1f)<<6)|0x0800;
+			c += arr.shift()&0x3f;
+			result += String.fromCharCode(c);
+		} else {
+			var c = ((i&0x0f)<<12);
+			c += (arr.shift()&0x3f)<<6;
+			c += arr.shift() & 0x3f;
+			result += String.fromCharCode(c);
+		}
+		}
+		return result;
 	},
 	fmtNemHeight: function(key, data) {
 		if (!(key in data)) { return; }
